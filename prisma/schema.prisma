@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGO_URL")
+}
+
+model Track {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  artist      String
+  album       String?
+  durationSec Int
+  genre       String?
+  bpm         Int?
+  key         String?
+  artworkUrl  String?
+  storageKey  String   @unique
+  isLocal     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  collections CollectionTrack[]
+
+  @@index([title])
+  @@index([artist])
+  @@index([album])
+  @@index([createdAt])
+}
+
+model Collection {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  coverUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tracks CollectionTrack[]
+}
+
+model CollectionTrack {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  collectionId String @db.ObjectId
+  trackId      String @db.ObjectId
+  order        Int
+
+  collection Collection @relation(fields: [collectionId], references: [id])
+  track      Track      @relation(fields: [trackId], references: [id])
+
+  @@unique([collectionId, trackId])
+  @@index([collectionId, order])
+}

@@ -42,3 +42,5 @@ next-env.d.ts
 
 /tracks/
 AGENTS.md
+.claude
+.cursor

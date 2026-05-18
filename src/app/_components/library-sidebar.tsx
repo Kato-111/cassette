@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { startTransition, useEffect, useRef } from "react";
-import type { Collection } from "@prisma/client";
+import { Collection } from "@prisma/client";
 import {
   DropdownMenu,
   DropdownMenuContent,

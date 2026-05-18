@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  IconPlayerPause,
-  IconPlayerPlay,
-  IconPlayerSkipBack,
-  IconPlayerSkipForward,
+  IconPlayerPauseFilled,
+  IconPlayerPlayFilled,
+  IconPlayerSkipBackFilled,
+  IconPlayerSkipForwardFilled,
   IconVolume,
   IconVolumeOff,
 } from "@tabler/icons-react";
@@ -53,32 +53,32 @@ const TransportButtons = () => {
     <div className="flex items-center gap-3">
       <Button
         variant="ghost"
-        size="icon-xs"
+        size="icon"
         onClick={playPreviousTrack}
         disabled={!currentTrack}
         aria-label="Previous track"
-        className="text-muted-foreground hover:text-foreground"
+        className="hover:bg-foreground/10 rounded-full"
       >
-        <IconPlayerSkipBack />
+        <IconPlayerSkipBackFilled />
       </Button>
-      <button
-        type="button"
+      <Button
         onClick={togglePlayPause}
         disabled={!currentTrack}
         aria-label={isPlaying ? "Pause" : "Play"}
-        className="flex size-8 items-center justify-center rounded-full bg-foreground text-background transition-transform hover:scale-105 disabled:pointer-events-none disabled:opacity-40 [&>svg]:size-4"
+        size={"icon-lg"}
+        className="rounded-full border-rose bg-rose text-white shadow-rose/30 hover:bg-rose/90 data-pressed:bg-rose/90"
       >
-        {isPlaying ? <IconPlayerPause /> : <IconPlayerPlay />}
-      </button>
+        {isPlaying ? <IconPlayerPauseFilled /> : <IconPlayerPlayFilled />}
+      </Button>
       <Button
         variant="ghost"
-        size="icon-xs"
+        size="icon"
         onClick={playNextTrack}
         disabled={!currentTrack}
         aria-label="Next track"
-        className="text-muted-foreground hover:text-foreground"
+        className="hover:bg-foreground/10 rounded-full"
       >
-        <IconPlayerSkipForward />
+        <IconPlayerSkipForwardFilled />
       </Button>
     </div>
   );
@@ -112,7 +112,7 @@ const ScrubBar = () => {
         className="group/scrub relative h-1 flex-grow cursor-pointer rounded-full bg-white/10"
       >
         <div
-          className="absolute left-0 top-0 h-full rounded-full bg-foreground"
+          className="absolute left-0 top-0 h-full rounded-full bg-rose"
           style={{ width: `${progress}%` }}
         />
       </div>

@@ -19,6 +19,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -81,12 +82,17 @@ const TrackRow = ({
       <TableCell className="w-12 text-center tabular-nums">
         {isCurrent && isPlaying ? (
           <div className="mx-auto flex h-3 items-end justify-center gap-[2px]">
-            <div className="deck-eq-bar deck-eq-bar-1 h-3 w-1 bg-foreground/70" />
-            <div className="deck-eq-bar deck-eq-bar-2 h-3 w-1 bg-foreground/70" />
-            <div className="deck-eq-bar deck-eq-bar-3 h-3 w-1 bg-foreground/70" />
+            <div className="deck-eq-bar deck-eq-bar-1 h-3 w-1 bg-rose" />
+            <div className="deck-eq-bar deck-eq-bar-2 h-3 w-1 bg-rose" />
+            <div className="deck-eq-bar deck-eq-bar-3 h-3 w-1 bg-rose" />
           </div>
         ) : (
-          <span className="text-muted-foreground group-hover/tr:hidden">
+          <span
+            className={cn(
+              "group-hover/tr:hidden",
+              isCurrent ? "text-rose" : "text-muted-foreground",
+            )}
+          >
             {index + 1}
           </span>
         )}
@@ -106,7 +112,12 @@ const TrackRow = ({
             ) : null}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium text-foreground">
+            <div
+              className={cn(
+                "truncate text-sm font-medium",
+                isCurrent ? "text-rose" : "text-foreground",
+              )}
+            >
               {highlightMatch(track.title, query)}
             </div>
             <div className="truncate text-xs text-muted-foreground">
@@ -180,6 +191,73 @@ const TrackRow = ({
   );
 };
 
+const SKELETON_ROW_KEYS = [
+  "sk-r0",
+  "sk-r1",
+  "sk-r2",
+  "sk-r3",
+  "sk-r4",
+  "sk-r5",
+  "sk-r6",
+  "sk-r7",
+  "sk-r8",
+  "sk-r9",
+] as const;
+
+export const TrackListSkeleton = () => (
+  <div className="flex h-full min-h-0 flex-col" aria-hidden>
+    <Frame className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <Table variant="card" className="w-full">
+        <TableHeader
+          className={cn(
+            "sticky top-0 z-10 [&_tr]:border-b-0",
+            "[&_th]:bg-card [&_th]:font-normal [&_th]:text-muted-foreground",
+          )}
+        >
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-12 text-center text-xs">#</TableHead>
+            <TableHead className="text-xs">Title</TableHead>
+            <TableHead className="hidden text-xs md:table-cell">
+              Album
+            </TableHead>
+            <TableHead className="w-20 text-right text-xs">
+              Duration
+            </TableHead>
+            <TableHead className="w-10" />
+          </TableRow>
+        </TableHeader>
+        <TableBody className="h-full">
+          {SKELETON_ROW_KEYS.map((key) => (
+            <TableRow key={key} className="hover:bg-transparent">
+              <TableCell className="w-12">
+                <Skeleton className="mx-auto size-4 rounded-sm" />
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-9 shrink-0 rounded-sm" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-[min(100%,14rem)] rounded-sm" />
+                    <Skeleton className="h-3 w-[min(85%,10rem)] rounded-sm" />
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell className="hidden md:table-cell text-muted-foreground">
+                <Skeleton className="h-4 w-24 rounded-sm" />
+              </TableCell>
+              <TableCell className="text-right">
+                <Skeleton className="ml-auto h-4 w-10 rounded-sm" />
+              </TableCell>
+              <TableCell className="w-10">
+                <Skeleton className="size-7 rounded-sm opacity-40" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Frame>
+  </div>
+);
+
 export const TrackList = ({
   tracks,
   query,
@@ -224,7 +302,7 @@ export const TrackList = ({
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="h-full">
             {tracks.length === 0 ? (
               <TableRow>
                 <TableCell

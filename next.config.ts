@@ -11,6 +11,7 @@ const r2PublicHost = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   experimental: {
     serverActions: {
       bodySizeLimit: "5mb",

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  IconDeviceAudioTape,
   IconDotsVertical,
   IconMusic,
   IconPlaylist,
@@ -37,6 +38,7 @@ import {
 import { useDeck } from "@/app/_playback/deck-context";
 import { useLibrary } from "@/app/_hooks/use-library";
 import { SearchField } from "./search-field";
+import { Icon } from "./Icon";
 
 const CollectionRow = ({ collection }: { collection: Collection }) => {
   const pathname = usePathname();
@@ -114,9 +116,14 @@ export const LibrarySidebar = () => {
   return (
     <Sidebar
       collapsible="offcanvas"
-      className="h-[calc(100svh-var(--transport-h))] bg-black"
+      variant="floating"
+      className="h-[calc(100svh-var(--transport-h))]"
+      innerClassName="rounded-xl border border-white/12 bg-background shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_4px_12px_rgb(0_0_0/0.6)]"
     >
       <SidebarHeader>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold font-ephesis">Cassette</h1>
+        </div>
         <SearchField />
       </SidebarHeader>
       <SidebarContent

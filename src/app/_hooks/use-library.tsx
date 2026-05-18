@@ -2,7 +2,6 @@
 
 import {
   createContext,
-  use,
   useContext,
   useMemo,
   useOptimistic,
@@ -44,14 +43,13 @@ const reducer = (state: Collection[], action: LibraryAction): Collection[] => {
 };
 
 export const LibraryProvider = ({
-  collectionsPromise,
+  initialCollections,
   children,
 }: {
-  collectionsPromise: Promise<Collection[]>;
+  initialCollections: Collection[];
   children: ReactNode;
 }) => {
-  const initial = use(collectionsPromise);
-  const [collections, dispatch] = useOptimistic(initial, reducer);
+  const [collections, dispatch] = useOptimistic(initialCollections, reducer);
 
   const value = useMemo<LibraryContextValue>(
     () => ({

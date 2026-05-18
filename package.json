@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "postinstall": "prisma generate && ln -sf ../../.prisma node_modules/@prisma/client/.prisma",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
@@ -50,6 +51,8 @@
     "unrs-resolver"
   ],
   "trustedDependencies": [
+    "@prisma/client",
+    "prisma",
     "sharp",
     "unrs-resolver"
   ]

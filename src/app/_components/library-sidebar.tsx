@@ -1,15 +1,14 @@
 "use client";
 
 import {
-  IconDeviceAudioTape,
-  IconDotsVertical,
+  IconDots,
   IconMusic,
   IconPlaylist,
   IconPlus,
   IconTrash,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useEffect, useRef } from "react";
 import { Collection } from "@prisma/client";
 import {
@@ -30,6 +29,7 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   createCollectionAction,
@@ -38,7 +38,6 @@ import {
 import { useDeck } from "@/app/_playback/deck-context";
 import { useLibrary } from "@/app/_hooks/use-library";
 import { SearchField } from "./search-field";
-import { Icon } from "./Icon";
 
 const CollectionRow = ({ collection }: { collection: Collection }) => {
   const pathname = usePathname();
@@ -71,7 +70,7 @@ const CollectionRow = ({ collection }: { collection: Collection }) => {
         <DropdownMenuTrigger
           render={
             <SidebarMenuAction showOnHover aria-label="Collection options">
-              <IconDotsVertical />
+              <IconDots />
             </SidebarMenuAction>
           }
         />
@@ -89,9 +88,11 @@ const CollectionRow = ({ collection }: { collection: Collection }) => {
 export const LibrarySidebar = () => {
   const { collections, upsertCollection } = useLibrary();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const navRef = useRef<HTMLDivElement>(null);
   const { registerPaneRef, handlePaneKey, setActivePane } = useDeck();
+  const { isMobile } = useSidebar();
 
   useEffect(() => {
     registerPaneRef("sidebar", navRef);
@@ -117,19 +118,27 @@ export const LibrarySidebar = () => {
     <Sidebar
       collapsible="offcanvas"
       variant="floating"
-      className="h-[calc(100svh-var(--transport-h))]"
+      className="h-[calc(100svh-var(--transport-h))] pr-0"
       innerClassName="rounded-xl border border-white/12 bg-background shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_4px_12px_rgb(0_0_0/0.6)]"
     >
       <SidebarHeader>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold font-ephesis">Cassette</h1>
         </div>
-        <SearchField />
+        {isMobile ? (
+          <div className="mt-2">
+            <SearchField
+              value={searchParams.get("q") ?? ""}
+              basePath={pathname}
+            />
+          </div>
+        ) : null}
       </SidebarHeader>
       <SidebarContent
         ref={navRef}
         onClick={() => setActivePane("sidebar")}
         onKeyDown={(e) => handlePaneKey(e, "sidebar")}
+        className="mt-4"
       >
         <SidebarGroup>
           <SidebarGroupContent>

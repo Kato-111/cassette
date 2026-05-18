@@ -220,9 +220,7 @@ export const TrackListSkeleton = () => (
             <TableHead className="hidden text-xs md:table-cell">
               Album
             </TableHead>
-            <TableHead className="w-20 text-right text-xs">
-              Duration
-            </TableHead>
+            <TableHead className="w-20 text-right text-xs">Duration</TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>

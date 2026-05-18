@@ -10,6 +10,7 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SliderPrimitive } from "@/components/ui/slider";
 import { useDeck } from "./deck-context";
 import { formatDuration } from "@/lib/format";
 
@@ -125,56 +126,56 @@ const ScrubBar = () => {
 
 const VolumeKnob = () => {
   const { audioRef, currentTrack } = useDeck();
-  const [volume, setVolume] = useState(100);
+  const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
-  const [open, setOpen] = useState(false);
-  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = muted ? 0 : volume / 100;
-    }
+    if (!audioRef.current) return;
+    const v = muted ? 0 : volume / 100;
+    if (Number.isFinite(v)) audioRef.current.volume = v;
   }, [audioRef, muted, volume]);
 
-  const adjust = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!barRef.current) return;
-    const rect = barRef.current.getBoundingClientRect();
-    const pct = Math.max(
-      0,
-      Math.min(100, ((e.clientX - rect.left) / rect.width) * 100),
-    );
-    setVolume(pct);
-    setMuted(pct === 0);
-  };
-
+  // console.log(muted, volume);
   return (
-    <div className="relative">
+    <div className="flex w-32 items-center gap-2">
       <Button
         variant="ghost"
         size="icon-sm"
         disabled={!currentTrack}
-        onClick={() => {
-          setMuted((m) => !m);
-          setOpen((o) => !o);
-        }}
+        onClick={() => setMuted((m) => !m)}
         aria-label={muted ? "Unmute" : "Mute"}
+        className="shrink-0"
       >
-        {muted ? <IconVolumeOff /> : <IconVolume />}
+        {muted || volume === 0 ? (
+          <IconVolumeOff size={18} />
+        ) : (
+          <IconVolume size={18} />
+        )}
       </Button>
-      {open && (
-        <div className="absolute bottom-full right-0 mb-2 rounded-md border border-border bg-popover p-2 shadow-lg">
-          <div
-            ref={barRef}
-            onClick={adjust}
-            className="relative h-1 w-20 cursor-pointer rounded-full bg-muted"
-          >
-            <div
-              className="absolute left-0 top-0 h-full rounded-full bg-foreground"
-              style={{ width: `${volume}%` }}
+      <SliderPrimitive.Root
+        className="group/vol relative flex flex-1 touch-none select-none items-center"
+        value={[muted ? 0 : volume]}
+        min={0}
+        max={100}
+        onValueChange={(values) => {
+          const value = values as unknown as number;
+          setVolume(value);
+          setMuted(value === 0);
+        }}
+        thumbAlignment="edge"
+        disabled={!currentTrack}
+        aria-label="Volume"
+      >
+        <SliderPrimitive.Control className="flex h-5 w-full cursor-pointer items-center data-disabled:pointer-events-none data-disabled:opacity-40">
+          <SliderPrimitive.Track className="relative h-1 w-full rounded-full bg-white/25 transition-colors group-hover/vol:bg-white/30">
+            <SliderPrimitive.Indicator className="rounded-full bg-white transition-colors group-hover/vol:bg-rose" />
+            <SliderPrimitive.Thumb
+              index={0}
+              className="block size-3 rounded-full bg-white opacity-0 shadow-sm shadow-rose/40 outline-none transition-opacity focus-visible:opacity-100 group-hover/vol:opacity-100"
             />
-          </div>
-        </div>
-      )}
+          </SliderPrimitive.Track>
+        </SliderPrimitive.Control>
+      </SliderPrimitive.Root>
     </div>
   );
 };
@@ -195,13 +196,16 @@ export const TransportBar = () => {
     if (!audio) return;
     const tick = () => setCurrentTime(audio.currentTime);
     const onLoaded = () => setDuration(audio.duration);
+    const onEnded = () => playNextTrack();
     audio.addEventListener("timeupdate", tick);
     audio.addEventListener("loadedmetadata", onLoaded);
+    audio.addEventListener("ended", onEnded);
     return () => {
       audio.removeEventListener("timeupdate", tick);
       audio.removeEventListener("loadedmetadata", onLoaded);
+      audio.removeEventListener("ended", onEnded);
     };
-  }, [audioRef, setCurrentTime, setDuration]);
+  }, [audioRef, setCurrentTime, setDuration, playNextTrack]);
 
   useEffect(() => {
     if (!("mediaSession" in navigator) || !currentTrack) return;

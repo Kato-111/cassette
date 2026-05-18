@@ -13,7 +13,7 @@ import { uploadTrackArtworkAction } from "@/app/_actions/uploads";
 import { useDeck } from "./deck-context";
 import { cn } from "@/lib/utils";
 
-type EditableField = "title" | "artist" | "album" | "genre" | "bpm" | "key";
+type EditableField = "title" | "artist" | "album" | "genre";
 
 const EditableInput = ({
   trackId,
@@ -32,10 +32,10 @@ const EditableInput = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const [state, formAction, pending] = useActionState(
-    updateTrackFieldAction,
-    { ok: false as const, error: "" },
-  );
+  const [state, formAction, pending] = useActionState(updateTrackFieldAction, {
+    ok: false as const,
+    error: "",
+  });
 
   useEffect(() => {
     setValue(initialValue);
@@ -153,13 +153,9 @@ export const NowPlayingPanel = () => {
       <h2 className="mb-4 text-sm font-semibold text-foreground">
         Now Playing
       </h2>
-      <div className="group relative mx-auto mb-5 aspect-square w-full max-w-[14rem] overflow-hidden rounded-lg bg-muted shadow-lg shadow-black/40">
+      <div className="group relative mx-auto mb-5 aspect-square w-full max-w-56 overflow-hidden rounded-lg bg-muted shadow-lg shadow-black/40">
         {artworkUrl ? (
-          <img
-            src={artworkUrl}
-            alt=""
-            className="h-full w-full object-cover"
-          />
+          <img src={artworkUrl} alt="" className="h-full w-full object-cover" />
         ) : null}
         <form action={artworkAction} className="absolute inset-0">
           <input type="hidden" name="trackId" value={currentTrack.id} />
@@ -218,18 +214,6 @@ export const NowPlayingPanel = () => {
           field="genre"
           label="Genre"
           initialValue={currentTrack.genre ?? ""}
-        />
-        <EditableInput
-          trackId={currentTrack.id}
-          field="bpm"
-          label="BPM"
-          initialValue={currentTrack.bpm?.toString() ?? ""}
-        />
-        <EditableInput
-          trackId={currentTrack.id}
-          field="key"
-          label="Key"
-          initialValue={currentTrack.key ?? ""}
         />
       </div>
     </aside>

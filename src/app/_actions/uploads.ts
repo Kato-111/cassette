@@ -1,8 +1,11 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { extname, parse } from "node:path";
 import { prisma } from "@/lib/db";
 import { putObject } from "@/lib/r2";
+import { extractMetadata } from "@/lib/metadata";
+import { AUDIO_MIME_BY_EXT } from "@/lib/audio-mime";
 import { CACHE_TAGS } from "@/lib/queries";
 
 type ActionResult<T = unknown> =
@@ -10,6 +13,7 @@ type ActionResult<T = unknown> =
   | { ok: false; error: string };
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 
 const extFromMime = (mime: string, fallback = "jpg"): string => {
   const m = mime.toLowerCase();
@@ -55,6 +59,76 @@ export const uploadCollectionCoverAction = async (
     revalidateTag(CACHE_TAGS.collections, "max");
     revalidatePath(`/c/${collectionId}`);
     return { ok: true, coverUrl };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+};
+
+export const uploadTrackAction = async (
+  _prev: unknown,
+  formData: FormData,
+): Promise<ActionResult<{ trackId: string; title: string }>> => {
+  const file = formData.get("file");
+
+  if (!(file instanceof File)) {
+    return { ok: false, error: "Missing file" };
+  }
+  if (file.size === 0) {
+    return { ok: false, error: "File is empty" };
+  }
+  if (file.size > MAX_AUDIO_BYTES) {
+    return { ok: false, error: "File exceeds 50MB limit" };
+  }
+
+  const ext = extname(file.name).toLowerCase();
+  const mime = AUDIO_MIME_BY_EXT[ext] ?? file.type;
+  if (!mime || !mime.startsWith("audio/")) {
+    return { ok: false, error: "Unsupported file type" };
+  }
+
+  try {
+    const buf = await fileToBuffer(file);
+    const meta = await extractMetadata(buf, parse(file.name).name, mime);
+
+    const storageKey = `audio/${crypto.randomUUID()}${ext || ""}`;
+    const existing = await prisma.track.findUnique({ where: { storageKey } });
+    if (existing) {
+      return { ok: false, error: "Track already exists" };
+    }
+
+    await putObject(storageKey, buf, mime);
+
+    const track = await prisma.track.create({
+      data: {
+        title: meta.title,
+        artist: meta.artist,
+        album: meta.album,
+        durationSec: meta.durationSec,
+        genre: meta.genre,
+        bpm: meta.bpm,
+        key: meta.key,
+        storageKey,
+        isLocal: false,
+      },
+      select: { id: true, title: true },
+    });
+
+    if (meta.picture) {
+      const artworkKey = `artwork/${track.id}.${meta.picture.ext}`;
+      const artworkUrl = await putObject(
+        artworkKey,
+        meta.picture.data,
+        meta.picture.mime,
+      );
+      await prisma.track.update({
+        where: { id: track.id },
+        data: { artworkUrl },
+      });
+    }
+
+    revalidateTag(CACHE_TAGS.tracks, "max");
+    revalidatePath("/", "layout");
+    return { ok: true, trackId: track.id, title: track.title };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }

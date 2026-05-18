@@ -1,74 +1,68 @@
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconArrowsShuffle,
-} from "@tabler/icons-react";
-import Link from "next/link";
+import { IconArrowsShuffle } from "@tabler/icons-react";
 import { notFound } from "next/navigation";
+import { SearchField } from "@/app/_components/search-field";
+import { LibraryPageHeader } from "@/app/_components/library-page-header";
+import { LibraryPageShell } from "@/app/_components/library-page-shell";
 import { Button } from "@/components/ui/button";
 import { CoverTile } from "./cover-tile";
 import { TitleField } from "./title-field";
 import { TrackList } from "./track-list";
-import { getCollectionWithTracks } from "@/lib/queries";
+import { filterTracksByQuery, getCollectionWithTracks } from "@/lib/queries";
 import { formatDuration } from "@/lib/format";
 
 const CollectionPage = async ({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) => {
   const { id } = await params;
+  const { q } = await searchParams;
+  const query = q ?? "";
   const collection = await getCollectionWithTracks(id);
 
   if (!collection) notFound();
 
+  const tracks = filterTracksByQuery(collection.tracks, query);
+
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex items-center justify-between bg-background p-3">
-        <div className="flex items-center gap-1">
-          <Link href="/">
-            <Button variant="ghost" size="icon-sm" aria-label="Back">
-              <IconChevronLeft />
+    <LibraryPageShell
+      header={
+        <LibraryPageHeader
+          title={
+            <span className="truncate text-sm font-medium">
+              {collection.name}
+            </span>
+          }
+          search={
+            <SearchField value={query} basePath={`/c/${collection.id}`} />
+          }
+          actions={
+            <Button variant="ghost" size="icon-sm" aria-label="Shuffle">
+              <IconArrowsShuffle />
             </Button>
-          </Link>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            disabled
-            aria-label="Forward"
-          >
-            <IconChevronRight />
-          </Button>
-          <span className="ml-1 text-sm">{collection.name}</span>
+          }
+        />
+      }
+      banner={
+        <div className="flex items-center gap-3 bg-background px-4 py-3">
+          <CoverTile url={collection.coverUrl} collectionId={collection.id} />
+          <div>
+            <TitleField
+              collectionId={collection.id}
+              initialName={collection.name}
+            />
+            <p className="text-xs text-muted-foreground sm:text-sm">
+              {collection.trackCount} tracks •{" "}
+              {formatDuration(collection.durationSec)}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm">
-            Play all
-          </Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Shuffle">
-            <IconArrowsShuffle />
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3 bg-background px-4 py-3">
-        <CoverTile url={collection.coverUrl} collectionId={collection.id} />
-        <div>
-          <TitleField
-            collectionId={collection.id}
-            initialName={collection.name}
-          />
-          <p className="text-xs text-muted-foreground sm:text-sm">
-            {collection.trackCount} tracks •{" "}
-            {formatDuration(collection.durationSec)}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-1 flex-col overflow-hidden px-4 pb-4">
-        <TrackList tracks={collection.tracks} />
-      </div>
-    </div>
+      }
+    >
+      <TrackList tracks={tracks} query={query || undefined} />
+    </LibraryPageShell>
   );
 };
 

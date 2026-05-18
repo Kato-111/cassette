@@ -1,3 +1,4 @@
+import type { Track } from "@prisma/client";
 import { prisma } from "./db";
 
 export const CACHE_TAGS = {
@@ -80,4 +81,17 @@ export const searchTracks = async (rawQuery: string) => {
     )
     .slice(0, 50)
     .map((r) => r.track);
+};
+
+/** Filter an in-memory track list by the same title/artist/album substring rules as global search. */
+export const filterTracksByQuery = (tracks: Track[], rawQuery: string) => {
+  const q = rawQuery.trim();
+  if (!q) return tracks;
+  const needle = q.toLowerCase();
+  return tracks.filter(
+    (t) =>
+      t.title.toLowerCase().includes(needle) ||
+      (t.artist?.toLowerCase().includes(needle) ?? false) ||
+      (t.album?.toLowerCase().includes(needle) ?? false),
+  );
 };

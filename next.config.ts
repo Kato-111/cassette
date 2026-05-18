@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   experimental: {
     serverActions: {
-      bodySizeLimit: "5mb",
+      bodySizeLimit: "50mb",
     },
   },
   images: r2PublicHost

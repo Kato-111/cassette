@@ -3,6 +3,10 @@ import { IconArrowsShuffle } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { TrackList, TrackListSkeleton } from "@/app/c/[id]/track-list";
 import { getAllTracks, searchTracks } from "@/lib/queries";
+import { AddToLibraryDrawer } from "./_components/add-to-library-drawer";
+import { LibraryPageHeader } from "./_components/library-page-header";
+import { LibraryPageShell } from "./_components/library-page-shell";
+import { SearchField } from "./_components/search-field";
 
 const Tracks = async ({ query }: { query: string }) => {
   const tracks = query ? await searchTracks(query) : await getAllTracks();
@@ -18,25 +22,26 @@ const Page = async ({
   const query = q ?? "";
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex items-center justify-between bg-background p-3">
-        <span className="ml-1 text-sm font-medium">All Tracks</span>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm">
-            Play all
-          </Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Shuffle">
-            <IconArrowsShuffle />
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-1 flex-col overflow-hidden px-4 pb-4">
-        <Suspense fallback={<TrackListSkeleton />}>
-          <Tracks query={query} />
-        </Suspense>
-      </div>
-    </div>
+    <LibraryPageShell
+      header={
+        <LibraryPageHeader
+          title={<span className="text-sm font-medium">All Tracks</span>}
+          search={<SearchField value={query} basePath="/" />}
+          actions={
+            <>
+              <AddToLibraryDrawer />
+              <Button variant="ghost" size="icon-sm" aria-label="Shuffle">
+                <IconArrowsShuffle />
+              </Button>
+            </>
+          }
+        />
+      }
+    >
+      <Suspense fallback={<TrackListSkeleton />}>
+        <Tracks query={query} />
+      </Suspense>
+    </LibraryPageShell>
   );
 };
 

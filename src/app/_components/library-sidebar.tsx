@@ -9,7 +9,7 @@ import {
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { startTransition, useEffect, useRef } from "react";
+import { Suspense, startTransition, useEffect, useRef } from "react";
 import { Collection } from "@prisma/client";
 import {
   DropdownMenu,
@@ -85,10 +85,17 @@ const CollectionRow = ({ collection }: { collection: Collection }) => {
   );
 };
 
+const MobileSearchField = () => {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  return (
+    <SearchField value={searchParams.get("q") ?? ""} basePath={pathname} />
+  );
+};
+
 export const LibrarySidebar = () => {
   const { collections, upsertCollection } = useLibrary();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const navRef = useRef<HTMLDivElement>(null);
   const { registerPaneRef, handlePaneKey, setActivePane } = useDeck();
@@ -127,10 +134,9 @@ export const LibrarySidebar = () => {
         </div>
         {isMobile ? (
           <div className="mt-2">
-            <SearchField
-              value={searchParams.get("q") ?? ""}
-              basePath={pathname}
-            />
+            <Suspense fallback={<SearchField basePath={pathname} />}>
+              <MobileSearchField />
+            </Suspense>
           </div>
         ) : null}
       </SidebarHeader>

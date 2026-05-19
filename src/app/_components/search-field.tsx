@@ -15,7 +15,7 @@ export const SearchField = ({
   basePath = "/",
 }: {
   value?: string;
-  /** Path without query string (e.g. `/` or `/c/abc`). */
+  /** Path without query string (e.g. `/` or `/p/abc`). */
   basePath?: string;
 }) => {
   const router = useRouter();

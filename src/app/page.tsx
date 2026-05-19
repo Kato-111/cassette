@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { IconArrowsShuffle } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
-import { TrackList, TrackListSkeleton } from "@/app/c/[id]/track-list";
+import { TrackList, TrackListSkeleton } from "@/app/p/[id]/track-list";
 import { getAllTracks, searchTracks } from "@/lib/queries";
 import { AddToLibraryDrawer } from "./_components/add-to-library-drawer";
 import { LibraryPageHeader } from "./_components/library-page-header";
@@ -10,7 +10,14 @@ import { SearchField } from "./_components/search-field";
 
 const Tracks = async ({ query }: { query: string }) => {
   const tracks = query ? await searchTracks(query) : await getAllTracks();
-  return <TrackList tracks={tracks} query={query || undefined} />;
+  return (
+    <TrackList
+      key={tracks.map((t) => t.id).join("\0")}
+      tracks={tracks}
+      query={query || undefined}
+      reorder={{ type: "library" }}
+    />
+  );
 };
 
 const Page = async ({

@@ -8,7 +8,7 @@ import { TransportBar } from "@/app/_playback/transport-bar";
 import { LibrarySidebar } from "@/app/_components/library-sidebar";
 import { MobileTopBar } from "@/app/_components/mobile-top-bar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { getAllCollections } from "@/lib/queries";
+import { getAllPlaylists } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 const TRANSPORT_H = "calc(5rem + env(safe-area-inset-bottom))";
@@ -34,7 +34,7 @@ export const viewport: Viewport = {
 };
 
 const RootLayout = async ({ children }: { children: React.ReactNode }) => {
-  const collections = await getAllCollections();
+  const playlists = await getAllPlaylists();
 
   return (
     <html
@@ -48,7 +48,7 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
     >
       <body className="flex h-dvh flex-col overflow-hidden bg-black text-foreground">
         <DeckProvider>
-          <LibraryProvider initialCollections={collections}>
+          <LibraryProvider initialPlaylists={playlists}>
             <SidebarProvider
               style={
                 {

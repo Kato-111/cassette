@@ -10,7 +10,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, startTransition, useEffect, useRef } from "react";
-import { Collection } from "@prisma/client";
+import { Playlist } from "@prisma/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,28 +32,28 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  createCollectionAction,
-  removeCollectionAction,
-} from "@/app/_actions/collections";
+  createPlaylistAction,
+  removePlaylistAction,
+} from "@/app/_actions/playlists";
 import { useDeck } from "@/app/_playback/deck-context";
 import { useLibrary } from "@/app/_hooks/use-library";
 import { SearchField } from "./search-field";
 
-const CollectionRow = ({ collection }: { collection: Collection }) => {
+const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { removeCollection } = useLibrary();
+  const { removePlaylist } = useLibrary();
 
-  const isActive = pathname === `/c/${collection.id}`;
+  const isActive = pathname === `/p/${playlist.id}`;
 
   const onDelete = () => {
     startTransition(() => {
-      removeCollection(collection.id);
+      removePlaylist(playlist.id);
     });
     if (isActive) {
       router.push("/");
     }
-    void removeCollectionAction(collection.id).then(() => router.refresh());
+    void removePlaylistAction(playlist.id).then(() => router.refresh());
   };
 
   return (
@@ -61,15 +61,15 @@ const CollectionRow = ({ collection }: { collection: Collection }) => {
       <SidebarMenuButton
         isActive={isActive}
         size="sm"
-        render={<Link href={`/c/${collection.id}`} prefetch tabIndex={0} />}
+        render={<Link href={`/p/${playlist.id}`} prefetch tabIndex={0} />}
       >
         <IconPlaylist />
-        <span>{collection.name}</span>
+        <span>{playlist.name}</span>
       </SidebarMenuButton>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <SidebarMenuAction showOnHover aria-label="Collection options">
+            <SidebarMenuAction showOnHover aria-label="Playlist options">
               <IconDots />
             </SidebarMenuAction>
           }
@@ -94,7 +94,7 @@ const MobileSearchField = () => {
 };
 
 export const LibrarySidebar = () => {
-  const { collections, upsertCollection } = useLibrary();
+  const { playlists, upsertPlaylist } = useLibrary();
   const pathname = usePathname();
   const router = useRouter();
   const navRef = useRef<HTMLDivElement>(null);
@@ -106,18 +106,18 @@ export const LibrarySidebar = () => {
   }, [registerPaneRef]);
 
   const onCreate = async () => {
-    const result = await createCollectionAction();
+    const result = await createPlaylistAction();
     if (!result.ok) return;
     startTransition(() => {
-      upsertCollection({
+      upsertPlaylist({
         id: result.id,
-        name: "New Collection",
+        name: "New Playlist",
         coverUrl: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
     });
-    router.push(`/c/${result.id}`);
+    router.push(`/p/${result.id}`);
     router.refresh();
   };
 
@@ -164,14 +164,14 @@ export const LibrarySidebar = () => {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Collections</SidebarGroupLabel>
-          <SidebarGroupAction onClick={onCreate} aria-label="Add collection">
+          <SidebarGroupLabel>Playlists</SidebarGroupLabel>
+          <SidebarGroupAction onClick={onCreate} aria-label="Add playlist">
             <IconPlus />
           </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
-              {collections.map((c) => (
-                <CollectionRow key={c.id} collection={c} />
+              {playlists.map((p) => (
+                <PlaylistRow key={p.id} playlist={p} />
               ))}
             </SidebarMenu>
           </SidebarGroupContent>

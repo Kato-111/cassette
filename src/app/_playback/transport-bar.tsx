@@ -9,7 +9,7 @@ import {
   IconVolumeOff,
 } from "@tabler/icons-react";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SliderPrimitive } from "@/components/ui/slider";
 import { useDeck } from "./deck-context";
@@ -21,7 +21,6 @@ const TrackBadge = () => {
 
   return (
     <div className="flex w-1/3 items-center gap-3">
-      require a Server Component.
       <div className="size-10 shrink-0 overflow-hidden rounded-sm bg-muted">
         {currentTrack.artworkUrl ? (
           <Image
@@ -90,40 +89,57 @@ const TransportButtons = () => {
   );
 };
 
+const EMPTY_TIME = "--:--";
+
 const ScrubBar = () => {
-  const { currentTime, duration, audioRef, setCurrentTime } = useDeck();
-  const barRef = useRef<HTMLDivElement>(null);
-
-  const seek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const audio = audioRef.current;
-    const bar = barRef.current;
-    if (!audio || !bar || !duration) return;
-    const rect = bar.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const next = pct * duration;
-    audio.currentTime = next;
-    setCurrentTime(next);
-  };
-
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const { currentTrack, currentTime, duration, audioRef, setCurrentTime } =
+    useDeck();
+  const [scrubValue, setScrubValue] = useState<number | null>(null);
+  const hasTrack = Boolean(currentTrack);
+  const seekable = hasTrack && duration > 0;
+  const max = duration > 0 ? duration : 1;
+  const displayTime = Math.min(scrubValue ?? currentTime, max);
 
   return (
-    <div className="mt-1.5 flex w-full items-center gap-2">
+    <div className="group/scrub mt-1.5 flex w-full items-center gap-2">
       <span className="w-10 text-right text-[10px] tabular-nums text-muted-foreground">
-        {formatDuration(currentTime)}
+        {hasTrack ? formatDuration(displayTime) : EMPTY_TIME}
       </span>
-      <div
-        ref={barRef}
-        onClick={seek}
-        className="group/scrub relative h-1 grow cursor-pointer rounded-full bg-white/10"
+      <SliderPrimitive.Root
+        className="relative flex flex-1 touch-none select-none items-center"
+        value={[displayTime]}
+        min={0}
+        max={max}
+        step={0.1}
+        onValueChange={(values) => {
+          const next = Array.isArray(values) ? values[0] : (values as number);
+          setScrubValue(next);
+        }}
+        onValueCommitted={(values) => {
+          const next = Array.isArray(values) ? values[0] : (values as number);
+          const audio = audioRef.current;
+          if (audio && Number.isFinite(next)) {
+            audio.currentTime = next;
+            setCurrentTime(next);
+          }
+          setScrubValue(null);
+        }}
+        thumbAlignment="edge"
+        disabled={!seekable}
+        aria-label="Seek"
       >
-        <div
-          className="absolute left-0 top-0 h-full rounded-full bg-rose"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+        <SliderPrimitive.Control className="flex h-3 w-full cursor-pointer items-center data-disabled:pointer-events-none data-disabled:opacity-40">
+          <SliderPrimitive.Track className="relative h-1 w-full rounded-full bg-white/10">
+            <SliderPrimitive.Indicator className="rounded-full bg-rose" />
+            <SliderPrimitive.Thumb
+              index={0}
+              className="block size-3 rounded-full bg-white opacity-0 shadow-sm shadow-rose/40 outline-none transition-opacity group-hover/scrub:opacity-100 focus-visible:opacity-100 data-dragging:opacity-100"
+            />
+          </SliderPrimitive.Track>
+        </SliderPrimitive.Control>
+      </SliderPrimitive.Root>
       <span className="w-10 text-[10px] tabular-nums text-muted-foreground">
-        {formatDuration(duration)}
+        {hasTrack ? formatDuration(duration) : EMPTY_TIME}
       </span>
     </div>
   );
@@ -189,28 +205,12 @@ export const TransportBar = () => {
   const {
     currentTrack,
     audioRef,
+    setAudioElement,
     setCurrentTime,
-    setDuration,
     playPreviousTrack,
     playNextTrack,
     togglePlayPause,
   } = useDeck();
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const tick = () => setCurrentTime(audio.currentTime);
-    const onLoaded = () => setDuration(audio.duration);
-    const onEnded = () => playNextTrack();
-    audio.addEventListener("timeupdate", tick);
-    audio.addEventListener("loadedmetadata", onLoaded);
-    audio.addEventListener("ended", onEnded);
-    return () => {
-      audio.removeEventListener("timeupdate", tick);
-      audio.removeEventListener("loadedmetadata", onLoaded);
-      audio.removeEventListener("ended", onEnded);
-    };
-  }, [audioRef, setCurrentTime, setDuration, playNextTrack]);
 
   useEffect(() => {
     if (!("mediaSession" in navigator) || !currentTrack) return;
@@ -222,8 +222,14 @@ export const TransportBar = () => {
         ? [{ src: currentTrack.artworkUrl, sizes: "512x512" }]
         : undefined,
     });
-    navigator.mediaSession.setActionHandler("play", togglePlayPause);
-    navigator.mediaSession.setActionHandler("pause", togglePlayPause);
+    navigator.mediaSession.setActionHandler("play", () => {
+      const audio = audioRef.current;
+      if (audio?.paused) togglePlayPause();
+    });
+    navigator.mediaSession.setActionHandler("pause", () => {
+      const audio = audioRef.current;
+      if (audio && !audio.paused) togglePlayPause();
+    });
     navigator.mediaSession.setActionHandler("previoustrack", playPreviousTrack);
     navigator.mediaSession.setActionHandler("nexttrack", playNextTrack);
     navigator.mediaSession.setActionHandler("seekto", (details) => {
@@ -250,7 +256,7 @@ export const TransportBar = () => {
 
   return (
     <div className="flex h-[calc(5rem+env(safe-area-inset-bottom))] items-center justify-between bg-black px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
-      <audio ref={audioRef} />
+      <audio ref={setAudioElement} />
       <TrackBadge />
       <div className="flex w-full max-w-md flex-col items-center">
         <TransportButtons />

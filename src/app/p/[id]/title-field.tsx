@@ -2,20 +2,20 @@
 
 import { startTransition, useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { renameCollectionAction } from "@/app/_actions/collections";
+import { renamePlaylistAction } from "@/app/_actions/playlists";
 import { useLibrary } from "@/app/_hooks/use-library";
 
 export const TitleField = ({
-  collectionId,
+  playlistId,
   initialName,
 }: {
-  collectionId: string;
+  playlistId: string;
   initialName: string;
 }) => {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(initialName);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { patchCollection } = useLibrary();
+  const { patchPlaylist } = useLibrary();
 
   useEffect(() => {
     if (editing) inputRef.current?.focus();
@@ -34,9 +34,9 @@ export const TitleField = ({
       return;
     }
     startTransition(() => {
-      patchCollection(collectionId, { name: trimmed });
+      patchPlaylist(playlistId, { name: trimmed });
     });
-    await renameCollectionAction(collectionId, trimmed);
+    await renamePlaylistAction(playlistId, trimmed);
   };
 
   if (editing) {

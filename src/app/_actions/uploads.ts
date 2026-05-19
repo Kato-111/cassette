@@ -28,15 +28,15 @@ const extFromMime = (mime: string, fallback = "jpg"): string => {
 const fileToBuffer = async (file: File): Promise<Buffer> =>
   Buffer.from(await file.arrayBuffer());
 
-export const uploadCollectionCoverAction = async (
+export const uploadPlaylistCoverAction = async (
   _prev: unknown,
   formData: FormData,
 ): Promise<ActionResult<{ coverUrl: string }>> => {
-  const collectionId = formData.get("collectionId");
+  const playlistId = formData.get("playlistId");
   const file = formData.get("file");
 
-  if (typeof collectionId !== "string") {
-    return { ok: false, error: "Missing collectionId" };
+  if (typeof playlistId !== "string") {
+    return { ok: false, error: "Missing playlistId" };
   }
   if (!(file instanceof File)) {
     return { ok: false, error: "Missing file" };
@@ -48,16 +48,16 @@ export const uploadCollectionCoverAction = async (
   try {
     const buf = await fileToBuffer(file);
     const ext = extFromMime(file.type);
-    const key = `covers/${collectionId}.${ext}`;
+    const key = `covers/${playlistId}.${ext}`;
     const coverUrl = await putObject(key, buf, file.type || "image/jpeg");
 
-    await prisma.collection.update({
-      where: { id: collectionId },
+    await prisma.playlist.update({
+      where: { id: playlistId },
       data: { coverUrl },
     });
 
-    revalidateTag(CACHE_TAGS.collections, "max");
-    revalidatePath(`/c/${collectionId}`);
+    revalidateTag(CACHE_TAGS.playlists, "max");
+    revalidatePath(`/p/${playlistId}`);
     return { ok: true, coverUrl };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
@@ -98,6 +98,11 @@ export const uploadTrackAction = async (
 
     await putObject(storageKey, buf, mime);
 
+    const lastInLibrary = await prisma.track.findFirst({
+      orderBy: { libraryOrder: "desc" },
+      select: { libraryOrder: true },
+    });
+
     const track = await prisma.track.create({
       data: {
         title: meta.title,
@@ -108,6 +113,7 @@ export const uploadTrackAction = async (
         bpm: meta.bpm,
         key: meta.key,
         storageKey,
+        libraryOrder: (lastInLibrary?.libraryOrder ?? -1) + 1,
         isLocal: false,
       },
       select: { id: true, title: true },

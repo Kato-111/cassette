@@ -3,20 +3,22 @@ import { prisma } from "./db";
 
 export const CACHE_TAGS = {
   tracks: "tracks",
-  collections: "collections",
+  playlists: "playlists",
 } as const;
 
 export const getAllTracks = async () =>
-  prisma.track.findMany({ orderBy: { title: "asc" } });
+  prisma.track.findMany({
+    orderBy: [{ libraryOrder: "asc" }, { title: "asc" }],
+  });
 
 export const getTrackById = async (id: string) =>
   prisma.track.findUnique({ where: { id } });
 
-export const getAllCollections = async () =>
-  prisma.collection.findMany({ orderBy: { createdAt: "desc" } });
+export const getAllPlaylists = async () =>
+  prisma.playlist.findMany({ orderBy: { createdAt: "desc" } });
 
-export const getCollectionWithTracks = async (id: string) => {
-  const collection = await prisma.collection.findUnique({
+export const getPlaylistWithTracks = async (id: string) => {
+  const playlist = await prisma.playlist.findUnique({
     where: { id },
     include: {
       tracks: {
@@ -26,27 +28,27 @@ export const getCollectionWithTracks = async (id: string) => {
     },
   });
 
-  if (!collection) return null;
+  if (!playlist) return null;
 
-  const tracks = collection.tracks.map((ct) => ({
-    ...ct.track,
-    order: ct.order,
+  const tracks = playlist.tracks.map((pt) => ({
+    ...pt.track,
+    order: pt.order,
   }));
 
   return {
-    id: collection.id,
-    name: collection.name,
-    coverUrl: collection.coverUrl,
-    createdAt: collection.createdAt,
-    updatedAt: collection.updatedAt,
+    id: playlist.id,
+    name: playlist.name,
+    coverUrl: playlist.coverUrl,
+    createdAt: playlist.createdAt,
+    updatedAt: playlist.updatedAt,
     tracks,
     trackCount: tracks.length,
     durationSec: tracks.reduce((sum, t) => sum + t.durationSec, 0),
   };
 };
 
-export type CollectionWithTracks = NonNullable<
-  Awaited<ReturnType<typeof getCollectionWithTracks>>
+export type PlaylistWithTracks = NonNullable<
+  Awaited<ReturnType<typeof getPlaylistWithTracks>>
 >;
 
 export const searchTracks = async (rawQuery: string) => {

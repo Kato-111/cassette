@@ -3,17 +3,17 @@
 import { IconLoader2, IconUpload } from "@tabler/icons-react";
 import Image from "next/image";
 import { startTransition, useActionState } from "react";
-import { uploadCollectionCoverAction } from "@/app/_actions/uploads";
+import { uploadPlaylistCoverAction } from "@/app/_actions/uploads";
 
 export const CoverTile = ({
   url,
-  collectionId,
+  playlistId,
 }: {
   url: string | null;
-  collectionId: string;
+  playlistId: string;
 }) => {
   const [state, formAction, pending] = useActionState(
-    uploadCollectionCoverAction,
+    uploadPlaylistCoverAction,
     { ok: false as const, error: "" },
   );
 
@@ -23,7 +23,7 @@ export const CoverTile = ({
     return (
       <Image
         src={currentUrl}
-        alt="Collection cover"
+        alt="Playlist cover"
         width={80}
         height={80}
         unoptimized
@@ -34,13 +34,13 @@ export const CoverTile = ({
 
   return (
     <form action={formAction}>
-      <input type="hidden" name="collectionId" value={collectionId} />
+      <input type="hidden" name="playlistId" value={playlistId} />
       <label
-        htmlFor={`cover-upload-${collectionId}`}
+        htmlFor={`cover-upload-${playlistId}`}
         className="flex size-16 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-border text-muted-foreground sm:size-20"
       >
         <input
-          id={`cover-upload-${collectionId}`}
+          id={`cover-upload-${playlistId}`}
           type="file"
           name="file"
           accept="image/*"

@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { CoverTile } from "./cover-tile";
 import { TitleField } from "./title-field";
 import { TrackList } from "./track-list";
-import { filterTracksByQuery, getCollectionWithTracks } from "@/lib/queries";
+import { filterTracksByQuery, getPlaylistWithTracks } from "@/lib/queries";
 import { formatDuration } from "@/lib/format";
 
-const CollectionPage = async ({
+const PlaylistPage = async ({
   params,
   searchParams,
 }: {
@@ -20,11 +20,11 @@ const CollectionPage = async ({
   const { id } = await params;
   const { q } = await searchParams;
   const query = q ?? "";
-  const collection = await getCollectionWithTracks(id);
+  const playlist = await getPlaylistWithTracks(id);
 
-  if (!collection) notFound();
+  if (!playlist) notFound();
 
-  const tracks = filterTracksByQuery(collection.tracks, query);
+  const tracks = filterTracksByQuery(playlist.tracks, query);
 
   return (
     <LibraryPageShell
@@ -32,11 +32,11 @@ const CollectionPage = async ({
         <LibraryPageHeader
           title={
             <span className="truncate text-sm font-medium">
-              {collection.name}
+              {playlist.name}
             </span>
           }
           search={
-            <SearchField value={query} basePath={`/c/${collection.id}`} />
+            <SearchField value={query} basePath={`/p/${playlist.id}`} />
           }
           actions={
             <Button variant="ghost" size="icon-sm" aria-label="Shuffle">
@@ -47,23 +47,28 @@ const CollectionPage = async ({
       }
       banner={
         <div className="flex items-center gap-3 bg-background px-4 py-3">
-          <CoverTile url={collection.coverUrl} collectionId={collection.id} />
+          <CoverTile url={playlist.coverUrl} playlistId={playlist.id} />
           <div>
             <TitleField
-              collectionId={collection.id}
-              initialName={collection.name}
+              playlistId={playlist.id}
+              initialName={playlist.name}
             />
             <p className="text-xs text-muted-foreground sm:text-sm">
-              {collection.trackCount} tracks •{" "}
-              {formatDuration(collection.durationSec)}
+              {playlist.trackCount} tracks •{" "}
+              {formatDuration(playlist.durationSec)}
             </p>
           </div>
         </div>
       }
     >
-      <TrackList tracks={tracks} query={query || undefined} />
+      <TrackList
+        key={tracks.map((t) => t.id).join("\0")}
+        tracks={tracks}
+        query={query || undefined}
+        reorder={{ type: "playlist", playlistId: playlist.id }}
+      />
     </LibraryPageShell>
   );
 };
 
-export default CollectionPage;
+export default PlaylistPage;

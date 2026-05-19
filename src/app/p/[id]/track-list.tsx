@@ -1,14 +1,36 @@
 "use client";
 
 import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DraggableAttributes,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   IconDots,
+  IconGripVertical,
   IconPlayerPause,
   IconPlayerPlay,
   IconPlus,
 } from "@tabler/icons-react";
 import Image from "next/image";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Track } from "@prisma/client";
+import { reorderPlaylistTracksAction } from "@/app/_actions/playlists";
+import { reorderLibraryTracksAction } from "@/app/_actions/tracks";
 import { Button } from "@/components/ui/button";
 import { Frame } from "@/components/ui/frame";
 import {
@@ -29,20 +51,37 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { attachTrackAction } from "@/app/_actions/collections";
+import { attachTrackAction } from "@/app/_actions/playlists";
 import { useDeck } from "@/app/_playback/deck-context";
 import { useLibrary } from "@/app/_hooks/use-library";
 import { formatDuration, highlightMatch } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+export type TrackListReorder =
+  | { type: "library" }
+  | { type: "playlist"; playlistId: string };
+
 const TrackRow = ({
   track,
   index,
   query,
+  sortable,
+  setNodeRef,
+  style,
+  isDragging,
+  dragHandleProps,
 }: {
   track: Track;
   index: number;
   query?: string;
+  sortable: boolean;
+  setNodeRef?: (node: HTMLTableRowElement | null) => void;
+  style?: React.CSSProperties;
+  isDragging?: boolean;
+  dragHandleProps?: {
+    attributes: DraggableAttributes;
+    listeners: ReturnType<typeof useSortable>["listeners"];
+  };
 }) => {
   const {
     currentTrack,
@@ -52,7 +91,7 @@ const TrackRow = ({
     setActivePane,
     handlePaneKey,
   } = useDeck();
-  const { collections } = useLibrary();
+  const { playlists } = useLibrary();
 
   const isCurrent = currentTrack?.id === track.id;
 
@@ -67,6 +106,8 @@ const TrackRow = ({
 
   return (
     <TableRow
+      ref={setNodeRef}
+      style={style}
       tabIndex={0}
       data-state={isCurrent ? "selected" : undefined}
       onClick={trigger}
@@ -78,11 +119,38 @@ const TrackRow = ({
           handlePaneKey(e, "tracklist");
         }
       }}
-      className="group/tr cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+      className={cn(
+        "group/tr cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
+        isDragging && "relative z-10 opacity-60",
+      )}
     >
-      <TableCell className="w-12 text-center tabular-nums">
+      <TableCell className="w-12 min-w-12 max-w-12 text-center tabular-nums">
+        <div className="relative mx-auto size-7 shrink-0">
+        {sortable && dragHandleProps ? (
+          <button
+            type="button"
+            className={cn(
+              "absolute inset-0 hidden items-center justify-center rounded-sm text-muted-foreground",
+              "cursor-grab active:cursor-grabbing hover:text-foreground",
+              "group-hover/tr:flex focus-visible:flex",
+              isDragging && "flex",
+            )}
+            aria-label={`Reorder ${track.title}`}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            {...dragHandleProps.attributes}
+            {...(dragHandleProps.listeners ?? {})}
+          >
+            <IconGripVertical className="size-3.5" />
+          </button>
+        ) : null}
         {isCurrent && isPlaying ? (
-          <div className="mx-auto flex h-3 items-end justify-center gap-[2px]">
+          <div
+            className={cn(
+              "absolute inset-0 flex items-end justify-center gap-[2px] pb-2",
+              sortable && "group-hover/tr:hidden",
+            )}
+          >
             <div className="deck-eq-bar deck-eq-bar-1 h-3 w-1 bg-rose" />
             <div className="deck-eq-bar deck-eq-bar-2 h-3 w-1 bg-rose" />
             <div className="deck-eq-bar deck-eq-bar-3 h-3 w-1 bg-rose" />
@@ -90,7 +158,8 @@ const TrackRow = ({
         ) : (
           <span
             className={cn(
-              "group-hover/tr:hidden",
+              "absolute inset-0 flex items-center justify-center text-sm",
+              sortable && "group-hover/tr:hidden",
               isCurrent ? "text-rose" : "text-muted-foreground",
             )}
           >
@@ -98,8 +167,14 @@ const TrackRow = ({
           </span>
         )}
         {!(isCurrent && isPlaying) && (
-          <IconPlayerPlay className="mx-auto hidden size-3.5 text-foreground group-hover/tr:block" />
+          <IconPlayerPlay
+            className={cn(
+              "absolute inset-0 m-auto hidden size-3.5 text-foreground",
+              sortable ? "group-hover/tr:hidden" : "group-hover/tr:block",
+            )}
+          />
         )}
+        </div>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-3">
@@ -171,18 +246,18 @@ const TrackRow = ({
               </DropdownMenuItem>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
-                  <IconPlus /> Add to collection
+                  <IconPlus /> Add to playlist
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-48">
-                  {collections.map((c) => (
+                  {playlists.map((p) => (
                     <DropdownMenuItem
-                      key={c.id}
+                      key={p.id}
                       onClick={(e) => {
                         e.stopPropagation();
-                        void attachTrackAction(c.id, track.id);
+                        void attachTrackAction(p.id, track.id);
                       }}
                     >
-                      {c.name}
+                      {p.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
@@ -192,6 +267,43 @@ const TrackRow = ({
         </div>
       </TableCell>
     </TableRow>
+  );
+};
+
+const SortableTrackRow = ({
+  track,
+  index,
+  query,
+}: {
+  track: Track;
+  index: number;
+  query?: string;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: track.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <TrackRow
+      track={track}
+      index={index}
+      query={query}
+      sortable
+      setNodeRef={setNodeRef}
+      style={style}
+      isDragging={isDragging}
+      dragHandleProps={{ attributes, listeners }}
+    />
   );
 };
 
@@ -219,7 +331,7 @@ export const TrackListSkeleton = () => (
           )}
         >
           <TableRow className="hover:bg-transparent">
-            <TableHead className="w-12 text-center text-xs">#</TableHead>
+            <TableHead className="w-12 min-w-12 max-w-12 text-center text-xs">#</TableHead>
             <TableHead className="text-xs">Title</TableHead>
             <TableHead className="hidden text-xs md:table-cell">
               Album
@@ -231,8 +343,8 @@ export const TrackListSkeleton = () => (
         <TableBody className="h-full">
           {SKELETON_ROW_KEYS.map((key) => (
             <TableRow key={key} className="hover:bg-transparent">
-              <TableCell className="w-12">
-                <Skeleton className="mx-auto size-4 rounded-sm" />
+              <TableCell className="w-12 min-w-12 max-w-12">
+                <Skeleton className="mx-auto size-7 rounded-sm" />
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-3">
@@ -261,14 +373,19 @@ export const TrackListSkeleton = () => (
 );
 
 export const TrackList = ({
-  tracks,
+  tracks: initialTracks,
   query,
+  reorder,
 }: {
   tracks: Track[];
   query?: string;
+  reorder?: TrackListReorder;
 }) => {
   const listRef = useRef<HTMLDivElement>(null);
+  const dndContextId = useId();
   const { registerPaneRef, setActivePane, setQueue } = useDeck();
+  const [tracks, setTracks] = useState(initialTracks);
+  const canReorder = Boolean(reorder && !query);
 
   useEffect(() => {
     registerPaneRef("tracklist", listRef);
@@ -278,6 +395,87 @@ export const TrackList = ({
     setQueue(tracks);
   }, [tracks, setQueue]);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !reorder) return;
+
+    const oldIndex = tracks.findIndex((t) => t.id === active.id);
+    const newIndex = tracks.findIndex((t) => t.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const next = arrayMove(tracks, oldIndex, newIndex);
+    setTracks(next);
+
+    const ids = next.map((t) => t.id);
+    if (reorder.type === "library") {
+      void reorderLibraryTracksAction(ids);
+    } else {
+      void reorderPlaylistTracksAction(reorder.playlistId, ids);
+    }
+  };
+
+  const trackRows = tracks.map((track, i) =>
+    canReorder ? (
+      <SortableTrackRow key={track.id} track={track} index={i} query={query} />
+    ) : (
+      <TrackRow
+        key={track.id}
+        track={track}
+        index={i}
+        query={query}
+        sortable={false}
+      />
+    ),
+  );
+
+  const tableBody =
+    tracks.length === 0 ? (
+      <TableRow>
+        <TableCell
+          colSpan={5}
+          className="py-12 text-center text-muted-foreground"
+        >
+          No tracks yet.
+        </TableCell>
+      </TableRow>
+    ) : canReorder ? (
+      <SortableContext
+        items={tracks.map((t) => t.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        {trackRows}
+      </SortableContext>
+    ) : (
+      trackRows
+    );
+
+  const table = (
+    <Table variant="card" className="w-full">
+      <TableHeader
+        className={cn(
+          "sticky top-0 z-10 [&_tr]:border-b-0",
+          "[&_th]:bg-card [&_th]:font-normal [&_th]:text-muted-foreground",
+        )}
+      >
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="w-12 min-w-12 max-w-12 text-center text-xs">#</TableHead>
+          <TableHead className="text-xs">Title</TableHead>
+          <TableHead className="hidden text-xs md:table-cell">Album</TableHead>
+          <TableHead className="w-20 text-right text-xs">Duration</TableHead>
+          <TableHead className="w-10" />
+        </TableRow>
+      </TableHeader>
+      <TableBody className="h-full">{tableBody}</TableBody>
+    </Table>
+  );
+
   return (
     <div
       ref={listRef}
@@ -285,47 +483,19 @@ export const TrackList = ({
       onClick={() => setActivePane("tracklist")}
     >
       <Frame className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        <Table variant="card" className="w-full">
-          <TableHeader
-            className={cn(
-              "sticky top-0 z-10 [&_tr]:border-b-0",
-              "[&_th]:bg-card [&_th]:font-normal [&_th]:text-muted-foreground",
-            )}
+        {canReorder ? (
+          <DndContext
+            id={dndContextId}
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            modifiers={[restrictToVerticalAxis]}
+            onDragEnd={handleDragEnd}
           >
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="w-12 text-center text-xs">#</TableHead>
-              <TableHead className="text-xs">Title</TableHead>
-              <TableHead className="hidden text-xs md:table-cell">
-                Album
-              </TableHead>
-              <TableHead className="w-20 text-right text-xs">
-                Duration
-              </TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody className="h-full">
-            {tracks.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-12 text-center text-muted-foreground"
-                >
-                  No tracks yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              tracks.map((track, i) => (
-                <TrackRow
-                  key={track.id}
-                  track={track}
-                  index={i}
-                  query={query}
-                />
-              ))
-            )}
-          </TableBody>
-        </Table>
+            {table}
+          </DndContext>
+        ) : (
+          table
+        )}
       </Frame>
     </div>
   );

@@ -14,6 +14,27 @@ const EDITABLE_TEXT_FIELDS = new Set([
   "key",
 ]);
 
+export const reorderLibraryTracksAction = async (
+  trackIds: string[],
+): Promise<ActionResult> => {
+  if (trackIds.length === 0) return { ok: true };
+
+  try {
+    await prisma.$transaction(
+      trackIds.map((id, libraryOrder) =>
+        prisma.track.update({
+          where: { id },
+          data: { libraryOrder },
+        }),
+      ),
+    );
+    revalidateTag(CACHE_TAGS.tracks, "max");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+};
+
 export const updateTrackFieldAction = async (
   _prev: unknown,
   formData: FormData,

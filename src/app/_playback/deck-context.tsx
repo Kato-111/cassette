@@ -28,6 +28,7 @@ type DeckContextValue = {
   setDuration: (duration: number) => void;
   setQueue: (tracks: Track[]) => void;
   audioRef: RefObject<HTMLAudioElement | null>;
+  setAudioElement: (audio: HTMLAudioElement | null) => void;
   activePane: Pane;
   setActivePane: (pane: Pane) => void;
   registerPaneRef: (pane: Pane, ref: RefObject<HTMLElement | null>) => void;
@@ -39,6 +40,16 @@ const DeckContext = createContext<DeckContextValue | undefined>(undefined);
 const streamUrlFor = (storageKey: string): string => {
   const segments = storageKey.split("/").map(encodeURIComponent).join("/");
   return `/api/stream/${segments}`;
+};
+
+/** play() rejects with AbortError when pause() runs before it settles — ignore that. */
+const safePlay = (audio: HTMLAudioElement): void => {
+  const promise = audio.play();
+  if (promise === undefined) return;
+  void promise.catch((err: unknown) => {
+    if (err instanceof DOMException && err.name === "AbortError") return;
+    console.error("Playback failed:", err);
+  });
 };
 
 const usePaneNav = () => {
@@ -115,6 +126,8 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
   const [duration, setDuration] = useState(0);
   const [queue, setQueue] = useState<Track[]>([]);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const audioCleanupRef = useRef<(() => void) | null>(null);
+  const playNextTrackRef = useRef<() => void>(() => {});
 
   const { activePane, setActivePane, registerPaneRef, handlePaneKey } =
     usePaneNav();
@@ -122,29 +135,58 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
   const togglePlayPause = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
+    if (audio.paused) {
+      safePlay(audio);
     } else {
-      void audio.play();
-      setIsPlaying(true);
+      audio.pause();
     }
-  }, [currentTrack, isPlaying]);
+  }, [currentTrack]);
 
   const playTrack = useCallback(
     (track: Track) => {
       setCurrentTrack(track);
-      setIsPlaying(true);
       setCurrentTime(0);
+      setDuration(0);
       const audio = audioRef.current;
       if (audio) {
         audio.src = streamUrlFor(track.storageKey);
-        void audio.play();
+        safePlay(audio);
       }
       setActivePane("tracklist");
     },
     [setActivePane],
   );
+
+  const setAudioElement = useCallback((audio: HTMLAudioElement | null) => {
+    audioCleanupRef.current?.();
+    audioCleanupRef.current = null;
+    audioRef.current = audio;
+    if (!audio) return;
+
+    const tick = () => setCurrentTime(audio.currentTime);
+    const onDuration = () => {
+      if (Number.isFinite(audio.duration)) setDuration(audio.duration);
+    };
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => playNextTrackRef.current();
+
+    audio.addEventListener("timeupdate", tick);
+    audio.addEventListener("loadedmetadata", onDuration);
+    audio.addEventListener("durationchange", onDuration);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("ended", onEnded);
+
+    audioCleanupRef.current = () => {
+      audio.removeEventListener("timeupdate", tick);
+      audio.removeEventListener("loadedmetadata", onDuration);
+      audio.removeEventListener("durationchange", onDuration);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, []);
 
   const playNextTrack = useCallback(() => {
     if (!currentTrack || queue.length === 0) return;
@@ -159,6 +201,8 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
     const prev = (i - 1 + queue.length) % queue.length;
     playTrack(queue[prev]);
   }, [currentTrack, queue, playTrack]);
+
+  playNextTrackRef.current = playNextTrack;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -194,6 +238,7 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
       setDuration,
       setQueue,
       audioRef,
+      setAudioElement,
       activePane,
       setActivePane,
       registerPaneRef,
@@ -212,6 +257,7 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
       setActivePane,
       registerPaneRef,
       handlePaneKey,
+      setAudioElement,
     ],
   );
 

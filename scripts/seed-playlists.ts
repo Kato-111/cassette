@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { prisma } from "../src/lib/db";
 
-const STARTER_COLLECTIONS = [
+const STARTER_PLAYLISTS = [
   "Late Night",
   "Workout",
   "Focus",
@@ -16,10 +16,10 @@ const main = async () => {
     process.exit(1);
   }
 
-  for (const name of STARTER_COLLECTIONS) {
-    const existing = await prisma.collection.findFirst({ where: { name } });
-    const collection =
-      existing ?? (await prisma.collection.create({ data: { name } }));
+  for (const name of STARTER_PLAYLISTS) {
+    const existing = await prisma.playlist.findFirst({ where: { name } });
+    const playlist =
+      existing ?? (await prisma.playlist.create({ data: { name } }));
 
     if (existing) {
       console.log(`= ${name} (already exists)`);
@@ -35,9 +35,9 @@ const main = async () => {
       .slice(0, count);
 
     for (let i = 0; i < shuffled.length; i++) {
-      await prisma.collectionTrack.create({
+      await prisma.playlistTrack.create({
         data: {
-          collectionId: collection.id,
+          playlistId: playlist.id,
           trackId: shuffled[i].id,
           order: i,
         },

@@ -8,6 +8,7 @@ import {
   IconVolume,
   IconVolumeOff,
 } from "@tabler/icons-react";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SliderPrimitive } from "@/components/ui/slider";
@@ -20,11 +21,15 @@ const TrackBadge = () => {
 
   return (
     <div className="flex w-1/3 items-center gap-3">
+      require a Server Component.
       <div className="size-10 shrink-0 overflow-hidden rounded-sm bg-muted">
         {currentTrack.artworkUrl ? (
-          <img
+          <Image
             src={currentTrack.artworkUrl}
             alt=""
+            width={40}
+            height={40}
+            unoptimized
             className="h-full w-full object-cover"
           />
         ) : null}
@@ -110,7 +115,7 @@ const ScrubBar = () => {
       <div
         ref={barRef}
         onClick={seek}
-        className="group/scrub relative h-1 flex-grow cursor-pointer rounded-full bg-white/10"
+        className="group/scrub relative h-1 grow cursor-pointer rounded-full bg-white/10"
       >
         <div
           className="absolute left-0 top-0 h-full rounded-full bg-rose"
@@ -153,7 +158,7 @@ const VolumeKnob = () => {
         )}
       </Button>
       <SliderPrimitive.Root
-        className="group/vol relative flex flex-1 touch-none select-none items-center"
+        className="relative flex flex-1 touch-none select-none items-center"
         value={[muted ? 0 : volume]}
         min={0}
         max={100}
@@ -167,11 +172,11 @@ const VolumeKnob = () => {
         aria-label="Volume"
       >
         <SliderPrimitive.Control className="flex h-5 w-full cursor-pointer items-center data-disabled:pointer-events-none data-disabled:opacity-40">
-          <SliderPrimitive.Track className="relative h-1 w-full rounded-full bg-white/25 transition-colors group-hover/vol:bg-white/30">
-            <SliderPrimitive.Indicator className="rounded-full bg-white transition-colors group-hover/vol:bg-rose" />
+          <SliderPrimitive.Track className="relative h-1 w-full rounded-full transition-colors  bg-white/30">
+            <SliderPrimitive.Indicator className="rounded-full bg-rose" />
             <SliderPrimitive.Thumb
               index={0}
-              className="block size-3 rounded-full bg-white opacity-0 shadow-sm shadow-rose/40 outline-none transition-opacity focus-visible:opacity-100 group-hover/vol:opacity-100"
+              className="block size-3 rounded-full bg-white shadow-sm shadow-rose/40 outline-none transition-opacity focus-visible:opacity-100"
             />
           </SliderPrimitive.Track>
         </SliderPrimitive.Control>

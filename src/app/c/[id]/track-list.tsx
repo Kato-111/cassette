@@ -6,6 +6,7 @@ import {
   IconPlayerPlay,
   IconPlus,
 } from "@tabler/icons-react";
+import Image from "next/image";
 import { useEffect, useRef } from "react";
 import type { Track } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -104,9 +105,12 @@ const TrackRow = ({
         <div className="flex items-center gap-3">
           <div className="relative size-9 shrink-0 overflow-hidden rounded-sm bg-muted">
             {track.artworkUrl ? (
-              <img
+              <Image
                 src={track.artworkUrl}
                 alt=""
+                width={36}
+                height={36}
+                unoptimized
                 className="h-full w-full object-cover"
               />
             ) : null}

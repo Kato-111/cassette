@@ -1,6 +1,7 @@
 "use client";
 
 import { IconLoader2, IconUpload } from "@tabler/icons-react";
+import Image from "next/image";
 import { startTransition, useActionState } from "react";
 import { uploadCollectionCoverAction } from "@/app/_actions/uploads";
 
@@ -20,9 +21,12 @@ export const CoverTile = ({
 
   if (currentUrl) {
     return (
-      <img
+      <Image
         src={currentUrl}
         alt="Collection cover"
+        width={80}
+        height={80}
+        unoptimized
         className="size-16 rounded-md object-cover sm:size-20"
       />
     );

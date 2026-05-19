@@ -1,6 +1,7 @@
 "use client";
 
 import { IconCheck, IconLoader2, IconPencil } from "@tabler/icons-react";
+import Image from "next/image";
 import {
   startTransition,
   useActionState,
@@ -155,7 +156,14 @@ export const NowPlayingPanel = () => {
       </h2>
       <div className="group relative mx-auto mb-5 aspect-square w-full max-w-56 overflow-hidden rounded-lg bg-muted shadow-lg shadow-black/40">
         {artworkUrl ? (
-          <img src={artworkUrl} alt="" className="h-full w-full object-cover" />
+          <Image
+            src={artworkUrl}
+            alt=""
+            fill
+            unoptimized
+            className="object-cover"
+            sizes="224px"
+          />
         ) : null}
         <form action={artworkAction} className="absolute inset-0">
           <input type="hidden" name="trackId" value={currentTrack.id} />

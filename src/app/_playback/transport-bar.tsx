@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  IconHeart,
   IconPlayerPauseFilled,
   IconPlayerPlayFilled,
   IconPlayerSkipBackFilled,
@@ -201,9 +202,75 @@ const VolumeKnob = () => {
   );
 };
 
+const MobileProgressIndicator = () => {
+  const { currentTrack, currentTime, duration } = useDeck();
+  const pct =
+    currentTrack && duration > 0
+      ? Math.min(100, Math.max(0, (currentTime / duration) * 100))
+      : 0;
+
+  return (
+    <div className="absolute inset-x-0 top-0 h-0.5 bg-white/10 md:hidden">
+      <div
+        className="h-full bg-rose transition-[width] duration-100 ease-linear"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
+};
+
+const MobileTrackRow = () => {
+  const { currentTrack, isPlaying, togglePlayPause } = useDeck();
+
+  return (
+    <>
+      <div className="size-10 shrink-0 overflow-hidden rounded-sm bg-muted">
+        {currentTrack?.artworkUrl ? (
+          <Image
+            src={currentTrack.artworkUrl}
+            alt=""
+            width={40}
+            height={40}
+            unoptimized
+            className="h-full w-full object-cover"
+          />
+        ) : null}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium text-foreground">
+          {currentTrack?.title ?? ""}
+        </div>
+        <div className="truncate text-xs text-muted-foreground">
+          {currentTrack?.artist ?? ""}
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        disabled={!currentTrack}
+        aria-label="Favorite"
+        className="shrink-0 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+      >
+        <IconHeart />
+      </Button>
+      <Button
+        onClick={togglePlayPause}
+        disabled={!currentTrack}
+        aria-label={isPlaying ? "Pause" : "Play"}
+        size="icon"
+        className="shrink-0 rounded-full border-rose bg-rose text-white shadow-rose/30 hover:bg-rose/90 data-pressed:bg-rose/90"
+      >
+        {isPlaying ? <IconPlayerPauseFilled /> : <IconPlayerPlayFilled />}
+      </Button>
+    </>
+  );
+};
+
 export const TransportBar = () => {
   const {
     currentTrack,
+    currentTime,
+    duration,
     audioRef,
     setAudioElement,
     setCurrentTime,
@@ -254,16 +321,33 @@ export const TransportBar = () => {
     audioRef,
   ]);
 
+  useEffect(() => {
+    if (!("mediaSession" in navigator) || !currentTrack || duration <= 0) return;
+    navigator.mediaSession.setPositionState({
+      duration,
+      playbackRate: audioRef.current?.playbackRate ?? 1,
+      position: Math.min(currentTime, duration),
+    });
+  }, [currentTrack, currentTime, duration, audioRef]);
+
   return (
-    <div className="flex h-[calc(5rem+env(safe-area-inset-bottom))] items-center justify-between bg-black px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+    <div className="relative h-[calc(5rem+env(safe-area-inset-bottom))] bg-black shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
       <audio ref={setAudioElement} />
-      <TrackBadge />
-      <div className="flex w-full max-w-md flex-col items-center">
-        <TransportButtons />
-        <ScrubBar />
+      <MobileProgressIndicator />
+
+      <div className="flex h-full items-center gap-3 px-3 pb-[env(safe-area-inset-bottom)] md:hidden">
+        <MobileTrackRow />
       </div>
-      <div className="flex w-1/3 items-center justify-end gap-2">
-        <VolumeKnob />
+
+      <div className="hidden h-full items-center justify-between px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:flex">
+        <TrackBadge />
+        <div className="flex w-full max-w-md flex-col items-center">
+          <TransportButtons />
+          <ScrubBar />
+        </div>
+        <div className="flex w-1/3 items-center justify-end gap-2">
+          <VolumeKnob />
+        </div>
       </div>
     </div>
   );

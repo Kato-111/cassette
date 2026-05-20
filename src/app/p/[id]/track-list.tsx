@@ -98,7 +98,7 @@ const TrackRow = ({
   const trigger = () => {
     setActivePane("tracklist");
     if (isCurrent) {
-      togglePlayPause();
+      if (!isPlaying) togglePlayPause();
     } else {
       playTrack(track);
     }
@@ -124,59 +124,59 @@ const TrackRow = ({
         isDragging && "relative z-10 opacity-60",
       )}
     >
-      <TableCell className="w-12 min-w-12 max-w-12 text-center tabular-nums">
-        <div className="relative mx-auto size-7 shrink-0">
-        {sortable && dragHandleProps ? (
-          <button
-            type="button"
-            className={cn(
-              "absolute inset-0 hidden items-center justify-center rounded-sm text-muted-foreground",
-              "cursor-grab active:cursor-grabbing hover:text-foreground",
-              "group-hover/tr:flex focus-visible:flex",
-              isDragging && "flex",
-            )}
-            aria-label={`Reorder ${track.title}`}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            {...dragHandleProps.attributes}
-            {...(dragHandleProps.listeners ?? {})}
-          >
-            <IconGripVertical className="size-3.5" />
-          </button>
-        ) : null}
-        {isCurrent && isPlaying ? (
-          <div
-            className={cn(
-              "absolute inset-0 flex items-end justify-center gap-[2px] pb-2",
-              sortable && "group-hover/tr:hidden",
-            )}
-          >
-            <div className="deck-eq-bar deck-eq-bar-1 h-3 w-1 bg-rose" />
-            <div className="deck-eq-bar deck-eq-bar-2 h-3 w-1 bg-rose" />
-            <div className="deck-eq-bar deck-eq-bar-3 h-3 w-1 bg-rose" />
-          </div>
-        ) : (
-          <span
-            className={cn(
-              "absolute inset-0 flex items-center justify-center text-sm",
-              sortable && "group-hover/tr:hidden",
-              isCurrent ? "text-rose" : "text-muted-foreground",
-            )}
-          >
-            {index + 1}
-          </span>
-        )}
-        {!(isCurrent && isPlaying) && (
-          <IconPlayerPlay
-            className={cn(
-              "absolute inset-0 m-auto hidden size-3.5 text-foreground",
-              sortable ? "group-hover/tr:hidden" : "group-hover/tr:block",
-            )}
-          />
-        )}
+      <TableCell className="w-12 min-w-12 max-w-12 max-sm:w-0 max-sm:min-w-0 max-sm:max-w-0 max-sm:p-0 max-sm:overflow-hidden text-center tabular-nums">
+        <div className="relative mx-auto size-7 shrink-0 max-sm:hidden">
+          {sortable && dragHandleProps ? (
+            <button
+              type="button"
+              className={cn(
+                "absolute inset-0 hidden items-center justify-center rounded-sm text-muted-foreground",
+                "cursor-grab active:cursor-grabbing hover:text-foreground",
+                "group-hover/tr:flex focus-visible:flex",
+                isDragging && "flex",
+              )}
+              aria-label={`Reorder ${track.title}`}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              {...dragHandleProps.attributes}
+              {...(dragHandleProps.listeners ?? {})}
+            >
+              <IconGripVertical className="size-3.5" />
+            </button>
+          ) : null}
+          {isCurrent && isPlaying ? (
+            <div
+              className={cn(
+                "absolute inset-0 flex items-end justify-center gap-[2px] pb-2",
+                sortable && "group-hover/tr:hidden",
+              )}
+            >
+              <div className="deck-eq-bar deck-eq-bar-1 h-3 w-1 bg-rose" />
+              <div className="deck-eq-bar deck-eq-bar-2 h-3 w-1 bg-rose" />
+              <div className="deck-eq-bar deck-eq-bar-3 h-3 w-1 bg-rose" />
+            </div>
+          ) : (
+            <span
+              className={cn(
+                "absolute inset-0 flex items-center justify-center text-sm",
+                sortable && "group-hover/tr:hidden",
+                isCurrent ? "text-rose" : "text-muted-foreground",
+              )}
+            >
+              {index + 1}
+            </span>
+          )}
+          {!(isCurrent && isPlaying) && (
+            <IconPlayerPlay
+              className={cn(
+                "absolute inset-0 m-auto hidden size-3.5 text-foreground",
+                sortable ? "group-hover/tr:hidden" : "group-hover/tr:block",
+              )}
+            />
+          )}
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell className="w-full max-w-0">
         <div className="flex items-center gap-3">
           <div className="relative size-9 shrink-0 overflow-hidden rounded-sm bg-muted">
             {track.artworkUrl ? (
@@ -206,13 +206,15 @@ const TrackRow = ({
         </div>
       </TableCell>
       <TableCell className="hidden text-muted-foreground md:table-cell">
-        {track.album ? highlightMatch(track.album, query) : "—"}
+        <span className="block truncate">
+          {track.album ? highlightMatch(track.album, query) : "—"}
+        </span>
       </TableCell>
-      <TableCell className="text-right tabular-nums text-muted-foreground">
+      <TableCell className="hidden sm:table-cell text-right tabular-nums text-muted-foreground">
         {formatDuration(track.durationSec)}
       </TableCell>
       <TableCell className="w-10">
-        <div className="opacity-0 transition-opacity group-hover/tr:opacity-100">
+        <div className="opacity-100 transition-opacity md:opacity-0 md:group-hover/tr:opacity-100">
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -322,31 +324,36 @@ const SKELETON_ROW_KEYS = [
 
 export const TrackListSkeleton = () => (
   <div className="flex h-full min-h-0 flex-col" aria-hidden>
-    <Frame className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+    <Frame className="flex min-h-0 w-full flex-1 flex-col overflow-hidden max-sm:**:data-[slot=table-container]:overflow-x-hidden">
       <Table variant="card" className="w-full">
         <TableHeader
           className={cn(
+            "hidden sm:table-header-group",
             "sticky top-0 z-10 [&_tr]:border-b-0",
             "[&_th]:bg-card [&_th]:font-normal [&_th]:text-muted-foreground",
           )}
         >
           <TableRow className="hover:bg-transparent">
-            <TableHead className="w-12 min-w-12 max-w-12 text-center text-xs">#</TableHead>
+            <TableHead className="hidden sm:table-cell w-12 min-w-12 max-w-12 text-center text-xs">
+              #
+            </TableHead>
             <TableHead className="text-xs">Title</TableHead>
             <TableHead className="hidden text-xs md:table-cell">
               Album
             </TableHead>
-            <TableHead className="w-20 text-right text-xs">Duration</TableHead>
+            <TableHead className="hidden sm:table-cell w-20 text-right text-xs">
+              Duration
+            </TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody className="h-full">
           {SKELETON_ROW_KEYS.map((key) => (
             <TableRow key={key} className="hover:bg-transparent">
-              <TableCell className="w-12 min-w-12 max-w-12">
-                <Skeleton className="mx-auto size-7 rounded-sm" />
+              <TableCell className="w-12 min-w-12 max-w-12 max-sm:w-0 max-sm:min-w-0 max-sm:max-w-0 max-sm:p-0 max-sm:overflow-hidden">
+                <Skeleton className="mx-auto size-7 rounded-sm max-sm:hidden" />
               </TableCell>
-              <TableCell>
+              <TableCell className="w-full max-w-0">
                 <div className="flex items-center gap-3">
                   <Skeleton className="size-9 shrink-0 rounded-sm" />
                   <div className="min-w-0 flex-1 space-y-2">
@@ -358,7 +365,7 @@ export const TrackListSkeleton = () => (
               <TableCell className="hidden md:table-cell text-muted-foreground">
                 <Skeleton className="h-4 w-24 rounded-sm" />
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="hidden sm:table-cell text-right">
                 <Skeleton className="ml-auto h-4 w-10 rounded-sm" />
               </TableCell>
               <TableCell className="w-10">
@@ -460,15 +467,20 @@ export const TrackList = ({
     <Table variant="card" className="w-full">
       <TableHeader
         className={cn(
+          "hidden sm:table-header-group",
           "sticky top-0 z-10 [&_tr]:border-b-0",
           "[&_th]:bg-card [&_th]:font-normal [&_th]:text-muted-foreground",
         )}
       >
         <TableRow className="hover:bg-transparent">
-          <TableHead className="w-12 min-w-12 max-w-12 text-center text-xs">#</TableHead>
+          <TableHead className="hidden sm:table-cell w-12 min-w-12 max-w-12 text-center text-xs">
+            #
+          </TableHead>
           <TableHead className="text-xs">Title</TableHead>
           <TableHead className="hidden text-xs md:table-cell">Album</TableHead>
-          <TableHead className="w-20 text-right text-xs">Duration</TableHead>
+          <TableHead className="hidden sm:table-cell w-20 text-right text-xs">
+            Duration
+          </TableHead>
           <TableHead className="w-10" />
         </TableRow>
       </TableHeader>
@@ -482,7 +494,7 @@ export const TrackList = ({
       className="flex h-full min-h-0 flex-col"
       onClick={() => setActivePane("tracklist")}
     >
-      <Frame className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <Frame className="flex min-h-0 w-full flex-1 flex-col overflow-hidden  max-sm:**:data-[slot=table-container]:overflow-x-hidden ">
         {canReorder ? (
           <DndContext
             id={dndContextId}

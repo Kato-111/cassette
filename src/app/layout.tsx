@@ -59,7 +59,7 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
               className="min-h-0 flex-1"
             >
               <LibrarySidebar />
-              <SidebarInset className="m-2 overflow-hidden rounded-xl border border-white/12 bg-background shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_4px_12px_rgb(0_0_0/0.6)]">
+              <SidebarInset className="m-2 overflow-hidden rounded-xl border border-white/12 bg-background shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_4px_12px_rgb(0_0_0/0.6)] max-md:m-0 max-md:rounded-none">
                 <MobileTopBar />
                 {children}
               </SidebarInset>

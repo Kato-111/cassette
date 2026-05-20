@@ -150,7 +150,7 @@ export const NowPlayingPanel = () => {
     : currentTrack.artworkUrl;
 
   return (
-    <aside className="m-2 ml-0 hidden w-72 flex-col overflow-auto rounded-xl border border-white/12 bg-background p-5 shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_4px_12px_rgb(0_0_0/0.6)] md:flex">
+    <aside className="m-2 ml-0 hidden w-72 flex-col overflow-auto rounded-xl border border-white/12 bg-background p-5 shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_4px_12px_rgb(0_0_0/0.6)] lg:flex">
       <h2 className="mb-4 text-sm font-semibold text-foreground">
         Now Playing
       </h2>

@@ -25,7 +25,6 @@ type DeckContextValue = {
   playNextTrack: () => void;
   playPreviousTrack: () => void;
   setCurrentTime: (time: number) => void;
-  setDuration: (duration: number) => void;
   setQueue: (tracks: Track[]) => void;
   audioRef: RefObject<HTMLAudioElement | null>;
   setAudioElement: (audio: HTMLAudioElement | null) => void;
@@ -123,7 +122,7 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
   const [queue, setQueue] = useState<Track[]>([]);
   const audioRef = useRef<HTMLAudioElement>(null);
   const audioCleanupRef = useRef<(() => void) | null>(null);
@@ -146,7 +145,7 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
     (track: Track) => {
       setCurrentTrack(track);
       setCurrentTime(0);
-      setDuration(0);
+      setAudioDuration(0);
       const audio = audioRef.current;
       if (audio) {
         audio.src = streamUrlFor(track.storageKey);
@@ -165,7 +164,7 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
 
     const tick = () => setCurrentTime(audio.currentTime);
     const onDuration = () => {
-      if (Number.isFinite(audio.duration)) setDuration(audio.duration);
+      if (Number.isFinite(audio.duration)) setAudioDuration(audio.duration);
     };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
@@ -224,6 +223,13 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [togglePlayPause]);
 
+  const duration =
+    currentTrack && currentTrack.durationSec > 0
+      ? currentTrack.durationSec
+      : audioDuration > 0
+        ? Math.round(audioDuration)
+        : 0;
+
   const value = useMemo(
     () => ({
       isPlaying,
@@ -235,7 +241,6 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
       playNextTrack,
       playPreviousTrack,
       setCurrentTime,
-      setDuration,
       setQueue,
       audioRef,
       setAudioElement,

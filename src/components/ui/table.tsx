@@ -12,7 +12,7 @@ export function Table({
 }): React.ReactElement {
   return (
     <div
-      className="relative w-full overflow-x-auto"
+      className="relative w-full overflow-x-auto scrollbar-none"
       data-slot="table-container"
       data-variant={variant}
     >

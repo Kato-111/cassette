@@ -14,7 +14,7 @@ export const LibraryPageShell = ({
   <div className="flex flex-1 flex-col overflow-hidden">
     {header}
     {banner}
-    <div className="flex flex-1 flex-col overflow-hidden px-4 pb-4">
+    <div className="flex flex-1 flex-col overflow-hidden px-4 pb-4 max-sm:px-1 ">
       {children}
     </div>
   </div>

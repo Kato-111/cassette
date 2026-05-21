@@ -12,6 +12,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { FavoriteButton } from "@/app/_components/favorite-button";
 import { useDeck } from "./deck-context";
 import { ScrubBar, TransportButtons } from "./transport-bar";
 
@@ -33,13 +34,19 @@ const NowPlayingDrawerContent = () => {
           />
         ) : null}
       </div>
-      <div className="w-full text-center">
-        <h2 className="truncate text-xl font-semibold text-foreground">
-          {currentTrack.title}
-        </h2>
-        <p className="truncate text-sm text-muted-foreground">
-          {currentTrack.artist}
-        </p>
+      <div className="flex w-full items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 text-center">
+          <h2 className="truncate text-xl font-semibold text-foreground">
+            {currentTrack.title}
+          </h2>
+          <p className="truncate text-sm text-muted-foreground">
+            {currentTrack.artist}
+          </p>
+        </div>
+        <FavoriteButton
+          trackId={currentTrack.id}
+          isFavorite={currentTrack.isFavorite}
+        />
       </div>
       <div className="mt-auto flex w-full flex-col items-center gap-4">
         <div className="w-full">

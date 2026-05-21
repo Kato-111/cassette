@@ -26,6 +26,7 @@ type DeckContextValue = {
   playPreviousTrack: () => void;
   setCurrentTime: (time: number) => void;
   setQueue: (tracks: Track[]) => void;
+  patchTrack: (id: string, partial: Partial<Track>) => void;
   audioRef: RefObject<HTMLAudioElement | null>;
   setAudioElement: (audio: HTMLAudioElement | null) => void;
   activePane: Pane;
@@ -201,6 +202,13 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
     playTrack(queue[prev]);
   }, [currentTrack, queue, playTrack]);
 
+  const patchTrack = useCallback((id: string, partial: Partial<Track>) => {
+    setCurrentTrack((t) => (t?.id === id ? { ...t, ...partial } : t));
+    setQueue((tracks) =>
+      tracks.map((t) => (t.id === id ? { ...t, ...partial } : t)),
+    );
+  }, []);
+
   playNextTrackRef.current = playNextTrack;
 
   useEffect(() => {
@@ -242,6 +250,7 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
       playPreviousTrack,
       setCurrentTime,
       setQueue,
+      patchTrack,
       audioRef,
       setAudioElement,
       activePane,
@@ -263,6 +272,7 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
       registerPaneRef,
       handlePaneKey,
       setAudioElement,
+      patchTrack,
     ],
   );
 

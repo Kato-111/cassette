@@ -4,7 +4,9 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { CACHE_TAGS } from "@/lib/queries";
 
-type ActionResult = { ok: true } | { ok: false; error: string };
+type ActionResult<T = unknown> =
+  | ({ ok: true } & T)
+  | { ok: false; error: string };
 
 const EDITABLE_TEXT_FIELDS = new Set([
   "title",
@@ -13,6 +15,33 @@ const EDITABLE_TEXT_FIELDS = new Set([
   "genre",
   "key",
 ]);
+
+export const toggleFavoriteAction = async (
+  trackId: string,
+): Promise<ActionResult<{ isFavorite: boolean }>> => {
+  if (!trackId.trim()) {
+    return { ok: false, error: "Missing trackId" };
+  }
+
+  try {
+    const track = await prisma.track.findUnique({ where: { id: trackId } });
+    if (!track) return { ok: false, error: "Track not found" };
+
+    const updated = await prisma.track.update({
+      where: { id: trackId },
+      data: { isFavorite: !track.isFavorite },
+      select: { isFavorite: true },
+    });
+
+    revalidateTag(CACHE_TAGS.tracks, "max");
+    revalidateTag(CACHE_TAGS.favorites, "max");
+    revalidatePath("/", "layout");
+    revalidatePath("/favorites");
+    return { ok: true, isFavorite: updated.isFavorite };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+};
 
 export const reorderLibraryTracksAction = async (
   trackIds: string[],

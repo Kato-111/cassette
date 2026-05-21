@@ -4,10 +4,17 @@ import { prisma } from "./db";
 export const CACHE_TAGS = {
   tracks: "tracks",
   playlists: "playlists",
+  favorites: "favorites",
 } as const;
 
 export const getAllTracks = async () =>
   prisma.track.findMany({
+    orderBy: [{ libraryOrder: "asc" }, { title: "asc" }],
+  });
+
+export const getFavoriteTracks = async () =>
+  prisma.track.findMany({
+    where: { isFavorite: true },
     orderBy: [{ libraryOrder: "asc" }, { title: "asc" }],
   });
 
@@ -88,6 +95,24 @@ export const searchTracks = async (rawQuery: string) => {
 
   const hits = await prisma.track.findMany({
     where: {
+      OR: [{ title: regex }, { artist: regex }, { album: regex }],
+    },
+    take: 100,
+  });
+
+  return rankSearchResults(hits, q);
+};
+
+export const searchFavoriteTracks = async (rawQuery: string) => {
+  const q = rawQuery.trim();
+  if (!q) return [];
+
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = { contains: escaped, mode: "insensitive" as const };
+
+  const hits = await prisma.track.findMany({
+    where: {
+      isFavorite: true,
       OR: [{ title: regex }, { artist: regex }, { album: regex }],
     },
     take: 100,

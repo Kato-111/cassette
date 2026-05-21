@@ -52,6 +52,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { attachTrackAction } from "@/app/_actions/playlists";
+import { FavoriteButton } from "@/app/_components/favorite-button";
 import { useDeck } from "@/app/_playback/deck-context";
 import { useLibrary } from "@/app/_hooks/use-library";
 import { formatDuration, highlightMatch } from "@/lib/format";
@@ -264,6 +265,11 @@ const TrackRow = ({
                   ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
+              <FavoriteButton
+                trackId={track.id}
+                isFavorite={track.isFavorite}
+                variant="menu-item"
+              />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -383,10 +389,12 @@ export const TrackList = ({
   tracks: initialTracks,
   query,
   reorder,
+  emptyMessage = "No tracks yet.",
 }: {
   tracks: Track[];
   query?: string;
   reorder?: TrackListReorder;
+  emptyMessage?: string;
 }) => {
   const listRef = useRef<HTMLDivElement>(null);
   const dndContextId = useId();
@@ -449,7 +457,7 @@ export const TrackList = ({
           colSpan={5}
           className="py-12 text-center text-muted-foreground"
         >
-          No tracks yet.
+          {emptyMessage}
         </TableCell>
       </TableRow>
     ) : canReorder ? (

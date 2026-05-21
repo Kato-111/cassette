@@ -2,6 +2,7 @@
 
 import {
   IconDots,
+  IconHeart,
   IconMusic,
   IconPlaylist,
   IconPlus,
@@ -159,6 +160,16 @@ export const LibrarySidebar = () => {
                 >
                   <IconMusic />
                   <span>All Tracks</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={pathname === "/favorites"}
+                  size="sm"
+                  render={<Link href="/favorites" prefetch tabIndex={0} />}
+                >
+                  <IconHeart />
+                  <span>Favorites</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

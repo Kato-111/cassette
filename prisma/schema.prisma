@@ -20,6 +20,7 @@ model Track {
   storageKey    String   @unique
   libraryOrder  Int      @default(0)
   isLocal       Boolean  @default(false)
+  isFavorite    Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -30,6 +31,7 @@ model Track {
   @@index([album])
   @@index([createdAt])
   @@index([libraryOrder])
+  @@index([isFavorite])
 }
 
 model Playlist {

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  IconHeart,
   IconPlayerPauseFilled,
   IconPlayerPlayFilled,
   IconPlayerSkipBackFilled,
@@ -13,6 +12,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SliderPrimitive } from "@/components/ui/slider";
+import { FavoriteButton } from "@/app/_components/favorite-button";
 import { useDeck } from "./deck-context";
 import { formatDuration } from "@/lib/format";
 import { NowPlayingDrawer } from "./now-playing-drawer";
@@ -220,6 +220,17 @@ const MobileProgressIndicator = () => {
   );
 };
 
+const DesktopFavoriteButton = () => {
+  const { currentTrack } = useDeck();
+  return (
+    <FavoriteButton
+      trackId={currentTrack?.id ?? ""}
+      isFavorite={currentTrack?.isFavorite ?? false}
+      disabled={!currentTrack}
+    />
+  );
+};
+
 const MobileTrackRow = () => {
   const { currentTrack, isPlaying, togglePlayPause } = useDeck();
 
@@ -247,15 +258,11 @@ const MobileTrackRow = () => {
           </div>
         </div>
       </NowPlayingDrawer>
-      <Button
-        variant="ghost"
-        size="icon"
+      <FavoriteButton
+        trackId={currentTrack?.id ?? ""}
+        isFavorite={currentTrack?.isFavorite ?? false}
         disabled={!currentTrack}
-        aria-label="Favorite"
-        className="shrink-0 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-      >
-        <IconHeart />
-      </Button>
+      />
       <Button
         onClick={togglePlayPause}
         disabled={!currentTrack}
@@ -350,6 +357,7 @@ export const TransportBar = () => {
           <ScrubBar />
         </div>
         <div className="flex w-1/3 items-center justify-end gap-2">
+          <DesktopFavoriteButton />
           <VolumeKnob />
         </div>
       </div>

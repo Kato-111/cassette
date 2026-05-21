@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { prismaMock, revalidateTagMock, revalidatePathMock } = vi.hoisted(() => ({
   prismaMock: {
     track: {
+      findUnique: vi.fn(),
       update: vi.fn(),
     },
     $transaction: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock("next/cache", () => ({
 
 import {
   reorderLibraryTracksAction,
+  toggleFavoriteAction,
   updateTrackFieldAction,
 } from "@/app/_actions/tracks";
 
@@ -83,6 +85,58 @@ describe("updateTrackFieldAction", () => {
       where: { id: "t1" },
       data: { title: "New Title" },
     });
+  });
+});
+
+describe("toggleFavoriteAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns error for empty trackId", async () => {
+    const result = await toggleFavoriteAction("  ");
+    expect(result).toEqual({ ok: false, error: "Missing trackId" });
+  });
+
+  it("returns error when track not found", async () => {
+    prismaMock.track.findUnique.mockResolvedValue(null);
+    const result = await toggleFavoriteAction("t1");
+    expect(result).toEqual({ ok: false, error: "Track not found" });
+  });
+
+  it("toggles false to true", async () => {
+    prismaMock.track.findUnique.mockResolvedValue({ id: "t1", isFavorite: false });
+    prismaMock.track.update.mockResolvedValue({ isFavorite: true });
+    const result = await toggleFavoriteAction("t1");
+    expect(result).toEqual({ ok: true, isFavorite: true });
+    expect(prismaMock.track.update).toHaveBeenCalledWith({
+      where: { id: "t1" },
+      data: { isFavorite: true },
+      select: { isFavorite: true },
+    });
+    expect(revalidateTagMock).toHaveBeenCalledWith("tracks", "max");
+    expect(revalidateTagMock).toHaveBeenCalledWith("favorites", "max");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/", "layout");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/favorites");
+  });
+
+  it("toggles true to false", async () => {
+    prismaMock.track.findUnique.mockResolvedValue({ id: "t1", isFavorite: true });
+    prismaMock.track.update.mockResolvedValue({ isFavorite: false });
+    const result = await toggleFavoriteAction("t1");
+    expect(result).toEqual({ ok: true, isFavorite: false });
+    expect(prismaMock.track.update).toHaveBeenCalledWith({
+      where: { id: "t1" },
+      data: { isFavorite: false },
+      select: { isFavorite: true },
+    });
+  });
+
+  it("returns error on DB failure", async () => {
+    prismaMock.track.findUnique.mockResolvedValue({ id: "t1", isFavorite: false });
+    prismaMock.track.update.mockRejectedValue(new Error("db fail"));
+    const result = await toggleFavoriteAction("t1");
+    expect(result).toEqual({ ok: false, error: "db fail" });
   });
 });
 

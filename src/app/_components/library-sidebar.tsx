@@ -44,7 +44,7 @@ const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
   const router = useRouter();
   const { removePlaylist } = useLibrary();
 
-  const isActive = pathname === `/p/${playlist.id}`;
+  const isActive = pathname === `/playlist/${playlist.id}`;
 
   const onDelete = () => {
     startTransition(() => {
@@ -61,7 +61,9 @@ const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
       <SidebarMenuButton
         isActive={isActive}
         size="sm"
-        render={<Link href={`/p/${playlist.id}`} prefetch tabIndex={0} />}
+        render={
+          <Link href={`/playlist/${playlist.id}`} prefetch tabIndex={0} />
+        }
       >
         <IconPlaylist />
         <span>{playlist.name}</span>
@@ -117,7 +119,7 @@ export const LibrarySidebar = () => {
         updatedAt: new Date(),
       });
     });
-    router.push(`/p/${result.id}`);
+    router.push(`/playlist/${result.id}`);
     router.refresh();
   };
 

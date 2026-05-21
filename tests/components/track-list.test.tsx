@@ -43,7 +43,7 @@ vi.mock("next/image", () => ({
   default: (props: { alt: string }) => <img alt={props.alt} />,
 }));
 
-import { TrackList } from "@/app/p/[id]/track-list";
+import { TrackList } from "@/app/playlist/[id]/track-list";
 
 const makeTrack = (overrides: Partial<Track> = {}): Track => ({
   id: "t1",
@@ -77,7 +77,9 @@ describe("TrackList", () => {
   it("clicking row calls playTrack", () => {
     const track = makeTrack();
     const { container } = render(<TrackList tracks={[track]} />);
-    const row = container.querySelector('[data-slot="table-body"] [data-slot="table-row"]');
+    const row = container.querySelector(
+      '[data-slot="table-body"] [data-slot="table-row"]',
+    );
     fireEvent.click(row!);
     expect(playTrackMock).toHaveBeenCalledWith(track);
   });

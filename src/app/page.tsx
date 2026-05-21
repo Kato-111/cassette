@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { IconArrowsShuffle } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
-import { TrackList, TrackListSkeleton } from "@/app/p/[id]/track-list";
+import { TrackList, TrackListSkeleton } from "@/app/playlist/[id]/track-list";
 import { getAllTracks, searchTracks } from "@/lib/queries";
 import { AddToLibraryDrawer } from "./_components/add-to-library-drawer";
 import { LibraryPageHeader } from "./_components/library-page-header";

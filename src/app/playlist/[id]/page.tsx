@@ -36,7 +36,7 @@ const PlaylistPage = async ({
             </span>
           }
           search={
-            <SearchField value={query} basePath={`/p/${playlist.id}`} />
+            <SearchField value={query} basePath={`/playlist/${playlist.id}`} />
           }
           actions={
             <Button variant="ghost" size="icon-sm" aria-label="Shuffle">
@@ -49,10 +49,7 @@ const PlaylistPage = async ({
         <div className="flex items-center gap-3 bg-background px-4 py-3">
           <CoverTile url={playlist.coverUrl} playlistId={playlist.id} />
           <div>
-            <TitleField
-              playlistId={playlist.id}
-              initialName={playlist.name}
-            />
+            <TitleField playlistId={playlist.id} initialName={playlist.name} />
             <p className="text-xs text-muted-foreground sm:text-sm">
               {playlist.trackCount} tracks •{" "}
               {formatDuration(playlist.durationSec)}

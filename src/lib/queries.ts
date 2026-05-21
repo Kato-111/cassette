@@ -51,6 +51,34 @@ export type PlaylistWithTracks = NonNullable<
   Awaited<ReturnType<typeof getPlaylistWithTracks>>
 >;
 
+const scoreSearchField = (s: string | null | undefined, needle: string) => {
+  if (!s) return -1;
+  const i = s.toLowerCase().indexOf(needle);
+  if (i < 0) return -1;
+  return 1000 - i - Math.abs(s.length - needle.length);
+};
+
+export const rankSearchResults = (tracks: Track[], rawQuery: string) => {
+  const needle = rawQuery.trim().toLowerCase();
+  if (!needle) return [];
+
+  return tracks
+    .map((track) => ({
+      track,
+      rank: Math.max(
+        scoreSearchField(track.title, needle),
+        scoreSearchField(track.artist, needle),
+        scoreSearchField(track.album, needle),
+      ),
+    }))
+    .filter((r) => r.rank >= 0)
+    .sort(
+      (a, b) => b.rank - a.rank || a.track.title.localeCompare(b.track.title),
+    )
+    .slice(0, 50)
+    .map((r) => r.track);
+};
+
 export const searchTracks = async (rawQuery: string) => {
   const q = rawQuery.trim();
   if (!q) return [];
@@ -65,24 +93,7 @@ export const searchTracks = async (rawQuery: string) => {
     take: 100,
   });
 
-  const needle = q.toLowerCase();
-  const score = (s: string | null | undefined) => {
-    if (!s) return -1;
-    const i = s.toLowerCase().indexOf(needle);
-    if (i < 0) return -1;
-    return 1000 - i - Math.abs(s.length - needle.length);
-  };
-
-  return hits
-    .map((t) => ({
-      track: t,
-      rank: Math.max(score(t.title), score(t.artist), score(t.album)),
-    }))
-    .sort(
-      (a, b) => b.rank - a.rank || a.track.title.localeCompare(b.track.title),
-    )
-    .slice(0, 50)
-    .map((r) => r.track);
+  return rankSearchResults(hits, q);
 };
 
 /** Filter an in-memory track list by the same title/artist/album substring rules as global search. */

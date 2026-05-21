@@ -23,7 +23,10 @@ type LibraryContextValue = {
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
-const reducer = (state: Playlist[], action: LibraryAction): Playlist[] => {
+export const libraryReducer = (
+  state: Playlist[],
+  action: LibraryAction,
+): Playlist[] => {
   switch (action.type) {
     case "upsert": {
       const exists = state.some((p) => p.id === action.playlist.id);
@@ -49,7 +52,7 @@ export const LibraryProvider = ({
   initialPlaylists: Playlist[];
   children: ReactNode;
 }) => {
-  const [playlists, dispatch] = useOptimistic(initialPlaylists, reducer);
+  const [playlists, dispatch] = useOptimistic(initialPlaylists, libraryReducer);
 
   const value = useMemo(
     () => ({

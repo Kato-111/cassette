@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { SliderPrimitive } from "@/components/ui/slider";
 import { useDeck } from "./deck-context";
 import { formatDuration } from "@/lib/format";
+import { NowPlayingDrawer } from "./now-playing-drawer";
 
 const TrackBadge = () => {
   const { currentTrack } = useDeck();
@@ -46,7 +47,7 @@ const TrackBadge = () => {
   );
 };
 
-const TransportButtons = () => {
+export const TransportButtons = () => {
   const {
     isPlaying,
     togglePlayPause,
@@ -92,7 +93,7 @@ const TransportButtons = () => {
 
 const EMPTY_TIME = "--:--";
 
-const ScrubBar = () => {
+export const ScrubBar = () => {
   const { currentTrack, currentTime, duration, audioRef, setCurrentTime } =
     useDeck();
   const [scrubValue, setScrubValue] = useState<number | null>(null);
@@ -224,26 +225,28 @@ const MobileTrackRow = () => {
 
   return (
     <>
-      <div className="size-10 shrink-0 overflow-hidden rounded-sm bg-muted">
-        {currentTrack?.artworkUrl ? (
-          <Image
-            src={currentTrack.artworkUrl}
-            alt=""
-            width={40}
-            height={40}
-            unoptimized
-            className="h-full w-full object-cover"
-          />
-        ) : null}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium text-foreground">
-          {currentTrack?.title ?? ""}
+      <NowPlayingDrawer>
+        <div className="size-10 shrink-0 overflow-hidden rounded-sm bg-muted">
+          {currentTrack?.artworkUrl ? (
+            <Image
+              src={currentTrack.artworkUrl}
+              alt=""
+              width={40}
+              height={40}
+              unoptimized
+              className="h-full w-full object-cover"
+            />
+          ) : null}
         </div>
-        <div className="truncate text-xs text-muted-foreground">
-          {currentTrack?.artist ?? ""}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-foreground">
+            {currentTrack?.title ?? ""}
+          </div>
+          <div className="truncate text-xs text-muted-foreground">
+            {currentTrack?.artist ?? ""}
+          </div>
         </div>
-      </div>
+      </NowPlayingDrawer>
       <Button
         variant="ghost"
         size="icon"
@@ -322,7 +325,8 @@ export const TransportBar = () => {
   ]);
 
   useEffect(() => {
-    if (!("mediaSession" in navigator) || !currentTrack || duration <= 0) return;
+    if (!("mediaSession" in navigator) || !currentTrack || duration <= 0)
+      return;
     navigator.mediaSession.setPositionState({
       duration,
       playbackRate: audioRef.current?.playbackRate ?? 1,

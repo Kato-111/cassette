@@ -1,0 +1,94 @@
+"use client";
+
+import { IconChevronDown } from "@tabler/icons-react";
+import Image from "next/image";
+import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerPanel,
+  DrawerPopup,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { useDeck } from "./deck-context";
+import { ScrubBar, TransportButtons } from "./transport-bar";
+
+const NowPlayingDrawerContent = () => {
+  const { currentTrack } = useDeck();
+  if (!currentTrack) return null;
+
+  return (
+    <div className="flex h-full flex-col items-center gap-6">
+      <div className="aspect-square w-full max-w-xs overflow-hidden rounded-xl bg-muted shadow-2xl shadow-black/60">
+        {currentTrack.artworkUrl ? (
+          <Image
+            src={currentTrack.artworkUrl}
+            alt=""
+            width={400}
+            height={400}
+            unoptimized
+            className="h-full w-full object-cover"
+          />
+        ) : null}
+      </div>
+      <div className="w-full text-center">
+        <h2 className="truncate text-xl font-semibold text-foreground">
+          {currentTrack.title}
+        </h2>
+        <p className="truncate text-sm text-muted-foreground">
+          {currentTrack.artist}
+        </p>
+      </div>
+      <div className="mt-auto flex w-full flex-col items-center gap-4">
+        <div className="w-full">
+          <ScrubBar />
+        </div>
+        <TransportButtons />
+      </div>
+    </div>
+  );
+};
+
+export const NowPlayingDrawer = ({ children }: { children: ReactNode }) => {
+  const { currentTrack } = useDeck();
+
+  return (
+    <Drawer>
+      <DrawerTrigger
+        disabled={!currentTrack}
+        render={
+          <button
+            type="button"
+            aria-label="Open now playing"
+            className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:opacity-100"
+          />
+        }
+      >
+        {children}
+      </DrawerTrigger>
+      <DrawerPopup
+        variant="straight"
+        showBar
+        viewportClassName="pt-0"
+        className="row-span-2 row-start-1 h-full rounded-none border-t-0"
+      >
+        <DrawerTitle className="sr-only">Now playing</DrawerTitle>
+        <DrawerClose
+          aria-label="Close now playing"
+          className="absolute end-2 top-[max(env(safe-area-inset-top,0px),--spacing(2))] z-10"
+          render={<Button size="icon" variant="ghost" />}
+        >
+          <IconChevronDown />
+        </DrawerClose>
+        <DrawerPanel
+          scrollable={false}
+          className="flex flex-1 flex-col pt-[calc(env(safe-area-inset-top,0px)+--spacing(6))]"
+        >
+          <NowPlayingDrawerContent />
+        </DrawerPanel>
+      </DrawerPopup>
+    </Drawer>
+  );
+};

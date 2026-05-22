@@ -1,9 +1,9 @@
 import { Suspense } from "react";
-import { TrackList, TrackListSkeleton } from "@/app/playlist/[id]/track-list";
+import { TrackList, TrackListSkeleton } from "@/app/_components/track-list";
 import { getFavoriteTracks, searchFavoriteTracks } from "@/lib/queries";
-import { LibraryPageHeader } from "../_components/library-page-header";
-import { LibraryPageShell } from "../_components/library-page-shell";
-import { SearchField } from "../_components/search-field";
+import { LibraryPageHeader } from "@/app/_components/library-page-header";
+import { LibraryPageShell } from "@/app/_components/library-page-shell";
+import { SearchField } from "@/app/_components/search-field";
 
 const Tracks = async ({ query }: { query: string }) => {
   const tracks = query
@@ -14,6 +14,7 @@ const Tracks = async ({ query }: { query: string }) => {
       key={tracks.map((t) => t.id).join("\0")}
       tracks={tracks}
       query={query || undefined}
+      view={{ kind: "favorites" }}
       emptyMessage="No favorite tracks yet."
     />
   );
@@ -31,7 +32,7 @@ const Page = async ({
     <LibraryPageShell
       header={
         <LibraryPageHeader
-          title={<span className="text-sm font-medium">Favorites</span>}
+          breadcrumb={[{ label: "Favorites" }]}
           search={<SearchField value={query} basePath="/favorites" />}
         />
       }

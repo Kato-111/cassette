@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { Track } from "@prisma/client";
 import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DeckProvider, useDeck } from "@/app/_playback/deck-context";
+import { DeckProvider, useDeck } from "@/contexts/deck-context";
 
 const makeTrack = (overrides: Partial<Track> = {}): Track => ({
   id: "t1",

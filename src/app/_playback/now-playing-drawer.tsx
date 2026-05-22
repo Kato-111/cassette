@@ -13,7 +13,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { FavoriteButton } from "@/app/_components/favorite-button";
-import { useDeck } from "./deck-context";
+import { useDeck } from "@/contexts/deck-context";
 import { ScrubBar, TransportButtons } from "./transport-bar";
 
 const NowPlayingDrawerContent = () => {

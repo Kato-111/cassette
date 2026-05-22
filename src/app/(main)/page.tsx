@@ -1,12 +1,12 @@
 import { Suspense } from "react";
 import { IconArrowsShuffle } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
-import { TrackList, TrackListSkeleton } from "@/app/playlist/[id]/track-list";
+import { TrackList, TrackListSkeleton } from "@/app/_components/track-list";
 import { getAllTracks, searchTracks } from "@/lib/queries";
-import { AddToLibraryDrawer } from "./_components/add-to-library-drawer";
-import { LibraryPageHeader } from "./_components/library-page-header";
-import { LibraryPageShell } from "./_components/library-page-shell";
-import { SearchField } from "./_components/search-field";
+import { AddToLibraryDrawer } from "@/app/_components/add-to-library-drawer";
+import { LibraryPageHeader } from "@/app/_components/library-page-header";
+import { LibraryPageShell } from "@/app/_components/library-page-shell";
+import { SearchField } from "@/app/_components/search-field";
 
 const Tracks = async ({ query }: { query: string }) => {
   const tracks = query ? await searchTracks(query) : await getAllTracks();
@@ -15,7 +15,7 @@ const Tracks = async ({ query }: { query: string }) => {
       key={tracks.map((t) => t.id).join("\0")}
       tracks={tracks}
       query={query || undefined}
-      reorder={{ type: "library" }}
+      view={{ kind: "library" }}
     />
   );
 };
@@ -32,7 +32,7 @@ const Page = async ({
     <LibraryPageShell
       header={
         <LibraryPageHeader
-          title={<span className="text-sm font-medium">All Tracks</span>}
+          breadcrumb={[{ label: "All Tracks" }]}
           search={<SearchField value={query} basePath="/" />}
           actions={
             <>

@@ -31,6 +31,7 @@ import {
   attachTrackAction,
   createPlaylistAction,
   detachTrackAction,
+  detachTracksAction,
   removePlaylistAction,
   renamePlaylistAction,
   reorderPlaylistTracksAction,
@@ -141,15 +142,38 @@ describe("reorderPlaylistTracksAction", () => {
 describe("detachTrackAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    prismaMock.playlistTrack.delete.mockResolvedValue({});
+    prismaMock.playlistTrack.deleteMany.mockResolvedValue({ count: 1 });
   });
 
-  it("deletes join row", async () => {
+  it("delegates to detachTracksAction", async () => {
     const result = await detachTrackAction("pl-1", "t-1");
     expect(result).toEqual({ ok: true });
-    expect(prismaMock.playlistTrack.delete).toHaveBeenCalledWith({
-      where: { playlistId_trackId: { playlistId: "pl-1", trackId: "t-1" } },
+    expect(prismaMock.playlistTrack.deleteMany).toHaveBeenCalledWith({
+      where: { playlistId: "pl-1", trackId: { in: ["t-1"] } },
     });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/playlist/pl-1");
+  });
+});
+
+describe("detachTracksAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prismaMock.playlistTrack.deleteMany.mockResolvedValue({ count: 2 });
+  });
+
+  it("returns ok for empty array", async () => {
+    const result = await detachTracksAction("pl-1", []);
+    expect(result).toEqual({ ok: true });
+    expect(prismaMock.playlistTrack.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("deletes multiple join rows", async () => {
+    const result = await detachTracksAction("pl-1", ["t-1", "t-2"]);
+    expect(result).toEqual({ ok: true });
+    expect(prismaMock.playlistTrack.deleteMany).toHaveBeenCalledWith({
+      where: { playlistId: "pl-1", trackId: { in: ["t-1", "t-2"] } },
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/playlist/pl-1");
   });
 });
 

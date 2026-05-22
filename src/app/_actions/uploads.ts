@@ -57,7 +57,7 @@ export const uploadPlaylistCoverAction = async (
     });
 
     revalidateTag(CACHE_TAGS.playlists, "max");
-    revalidatePath(`/p/${playlistId}`);
+    revalidatePath(`/playlist/${playlistId}`);
     return { ok: true, coverUrl };
   } catch (err) {
     return { ok: false, error: (err as Error).message };

@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SliderPrimitive } from "@/components/ui/slider";
 import { FavoriteButton } from "@/app/_components/favorite-button";
-import { useDeck } from "./deck-context";
+import { useDeck } from "@/contexts/deck-context";
 import { formatDuration } from "@/lib/format";
 import { NowPlayingDrawer } from "./now-playing-drawer";
 
@@ -92,6 +92,8 @@ export const TransportButtons = () => {
 };
 
 const EMPTY_TIME = "--:--";
+
+const MOBILE_TRANSPORT_HEIGHT = "calc(5rem + env(safe-area-inset-bottom))";
 
 export const ScrubBar = () => {
   const { currentTrack, currentTime, duration, audioRef, setCurrentTime } =
@@ -342,25 +344,41 @@ export const TransportBar = () => {
   }, [currentTrack, currentTime, duration, audioRef]);
 
   return (
-    <div className="relative h-[calc(5rem+env(safe-area-inset-bottom))] bg-black shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+    <>
       <audio ref={setAudioElement} />
-      <MobileProgressIndicator />
 
-      <div className="flex h-full items-center gap-3 px-3 pb-[env(safe-area-inset-bottom)] md:hidden">
-        <MobileTrackRow />
-      </div>
+      {currentTrack ? (
+        <>
+          <div
+            aria-hidden
+            className="shrink-0 md:hidden"
+            style={{ height: MOBILE_TRANSPORT_HEIGHT }}
+          />
+          <div
+            className="fixed inset-x-0 bottom-0 z-50 bg-black shadow-[inset_0_1px_0_rgb(255_255_255/0.04)] md:hidden"
+            style={{ height: MOBILE_TRANSPORT_HEIGHT }}
+          >
+            <MobileProgressIndicator />
+            <div className="flex h-full items-center gap-3 px-3 pb-[env(safe-area-inset-bottom)]">
+              <MobileTrackRow />
+            </div>
+          </div>
+        </>
+      ) : null}
 
-      <div className="hidden h-full items-center justify-between px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:flex">
-        <TrackBadge />
-        <div className="flex w-full max-w-md flex-col items-center">
-          <TransportButtons />
-          <ScrubBar />
-        </div>
-        <div className="flex w-1/3 items-center justify-end gap-2">
-          <DesktopFavoriteButton />
-          <VolumeKnob />
+      <div className="relative hidden h-[calc(5rem+env(safe-area-inset-bottom))] bg-black shadow-[inset_0_1px_0_rgb(255_255_255/0.04)] md:block">
+        <div className="flex h-full items-center justify-between px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+          <TrackBadge />
+          <div className="flex w-full max-w-md flex-col items-center">
+            <TransportButtons />
+            <ScrubBar />
+          </div>
+          <div className="flex w-1/3 items-center justify-end gap-2">
+            <DesktopFavoriteButton />
+            <VolumeKnob />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };

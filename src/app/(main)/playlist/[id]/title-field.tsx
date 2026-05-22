@@ -3,7 +3,7 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { renamePlaylistAction } from "@/app/_actions/playlists";
-import { useLibrary } from "@/app/_hooks/use-library";
+import { useLibrary } from "@/contexts/library-context";
 
 export const TitleField = ({
   playlistId,

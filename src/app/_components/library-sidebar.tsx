@@ -3,15 +3,30 @@
 import {
   IconDots,
   IconHeart,
+  IconLink,
   IconMusic,
-  IconPlaylist,
   IconPlus,
   IconTrash,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, startTransition, useEffect, useRef } from "react";
+import { Suspense, startTransition, useEffect, useRef, useState } from "react";
 import { Playlist } from "@prisma/client";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Form } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,14 +51,19 @@ import {
   createPlaylistAction,
   removePlaylistAction,
 } from "@/app/_actions/playlists";
-import { useDeck } from "@/app/_playback/deck-context";
-import { useLibrary } from "@/app/_hooks/use-library";
+import { useDeck } from "@/contexts/deck-context";
+import { useImporter } from "@/contexts/importer-context";
+import { useLibrary } from "@/contexts/library-context";
 import { SearchField } from "./search-field";
+import { PlaylistAvatar } from "./playlist-avatar";
+import { ImportFromUrlDialog } from "./import-from-url-dialog";
 
 const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { removePlaylist } = useLibrary();
+  const { enabled: importerEnabled } = useImporter();
+  const [importOpen, setImportOpen] = useState(false);
 
   const isActive = pathname === `/playlist/${playlist.id}`;
 
@@ -66,7 +86,7 @@ const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
           <Link href={`/playlist/${playlist.id}`} prefetch tabIndex={0} />
         }
       >
-        <IconPlaylist />
+        <PlaylistAvatar name={playlist.name} coverUrl={playlist.coverUrl} />
         <span>{playlist.name}</span>
       </SidebarMenuButton>
       <DropdownMenu>
@@ -78,12 +98,25 @@ const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
           }
         />
         <DropdownMenuContent align="end" className="w-36">
+          {importerEnabled ? (
+            <DropdownMenuItem onClick={() => setImportOpen(true)}>
+              <IconLink />
+              Import song
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem onClick={onDelete} variant="destructive">
             <IconTrash />
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {importerEnabled ? (
+        <ImportFromUrlDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          playlistId={playlist.id}
+        />
+      ) : null}
     </SidebarMenuItem>
   );
 };
@@ -96,10 +129,90 @@ const MobileSearchField = () => {
   );
 };
 
-export const LibrarySidebar = () => {
-  const { playlists, upsertPlaylist } = useLibrary();
-  const pathname = usePathname();
+const CreatePlaylistDialog = () => {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { upsertPlaylist } = useLibrary();
   const router = useRouter();
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next) setName("");
+  };
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    setLoading(true);
+    const result = await createPlaylistAction(trimmed);
+    setLoading(false);
+    if (!result.ok) return;
+
+    startTransition(() => {
+      upsertPlaylist({
+        id: result.id,
+        name: trimmed,
+        coverUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    });
+    setOpen(false);
+    setName("");
+    router.push(`/playlist/${result.id}`);
+    router.refresh();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger
+        render={
+          <SidebarGroupAction aria-label="Add playlist">
+            <IconPlus />
+          </SidebarGroupAction>
+        }
+      />
+      <DialogPopup>
+        <DialogHeader>
+          <DialogTitle>New playlist</DialogTitle>
+          <DialogDescription>
+            Give your playlist a name to get started.
+          </DialogDescription>
+        </DialogHeader>
+        <Form className="contents" onSubmit={onSubmit}>
+          <DialogPanel>
+            <Field>
+              <FieldLabel className="sr-only">Name</FieldLabel>
+              <Input
+                name="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="My playlist"
+                autoFocus
+                required
+              />
+            </Field>
+          </DialogPanel>
+          <DialogFooter>
+            <DialogClose render={<Button type="button" variant="outline" />}>
+              Cancel
+            </DialogClose>
+            <Button type="submit" loading={loading} disabled={!name.trim()}>
+              Create
+            </Button>
+          </DialogFooter>
+        </Form>
+      </DialogPopup>
+    </Dialog>
+  );
+};
+
+export const LibrarySidebar = () => {
+  const { playlists } = useLibrary();
+  const pathname = usePathname();
   const navRef = useRef<HTMLDivElement>(null);
   const { registerPaneRef, handlePaneKey, setActivePane } = useDeck();
   const { isMobile } = useSidebar();
@@ -107,22 +220,6 @@ export const LibrarySidebar = () => {
   useEffect(() => {
     registerPaneRef("sidebar", navRef);
   }, [registerPaneRef]);
-
-  const onCreate = async () => {
-    const result = await createPlaylistAction();
-    if (!result.ok) return;
-    startTransition(() => {
-      upsertPlaylist({
-        id: result.id,
-        name: "New Playlist",
-        coverUrl: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-    });
-    router.push(`/playlist/${result.id}`);
-    router.refresh();
-  };
 
   return (
     <Sidebar
@@ -178,9 +275,7 @@ export const LibrarySidebar = () => {
 
         <SidebarGroup>
           <SidebarGroupLabel>Playlists</SidebarGroupLabel>
-          <SidebarGroupAction onClick={onCreate} aria-label="Add playlist">
-            <IconPlus />
-          </SidebarGroupAction>
+          <CreatePlaylistDialog />
           <SidebarGroupContent>
             <SidebarMenu>
               {playlists.map((p) => (

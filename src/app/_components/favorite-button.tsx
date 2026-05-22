@@ -4,7 +4,7 @@ import { IconHeart, IconHeartFilled } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toggleFavoriteAction } from "@/app/_actions/tracks";
-import { useDeck } from "@/app/_playback/deck-context";
+import { useDeck } from "@/contexts/deck-context";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/menu";
 import { cn } from "@/lib/utils";

@@ -1,13 +1,18 @@
 import { IconArrowsShuffle } from "@tabler/icons-react";
 import { notFound } from "next/navigation";
+import { AddTracksToPlaylistDrawer } from "@/app/_components/add-tracks-to-playlist-drawer";
 import { SearchField } from "@/app/_components/search-field";
 import { LibraryPageHeader } from "@/app/_components/library-page-header";
 import { LibraryPageShell } from "@/app/_components/library-page-shell";
 import { Button } from "@/components/ui/button";
 import { CoverTile } from "./cover-tile";
 import { TitleField } from "./title-field";
-import { TrackList } from "./track-list";
-import { filterTracksByQuery, getPlaylistWithTracks } from "@/lib/queries";
+import { TrackList } from "@/app/_components/track-list";
+import {
+  filterTracksByQuery,
+  getAllTracks,
+  getPlaylistWithTracks,
+} from "@/lib/queries";
 import { formatDuration } from "@/lib/format";
 
 const PlaylistPage = async ({
@@ -20,34 +25,48 @@ const PlaylistPage = async ({
   const { id } = await params;
   const { q } = await searchParams;
   const query = q ?? "";
-  const playlist = await getPlaylistWithTracks(id);
+  const [playlist, libraryTracks] = await Promise.all([
+    getPlaylistWithTracks(id),
+    getAllTracks(),
+  ]);
 
   if (!playlist) notFound();
 
   const tracks = filterTracksByQuery(playlist.tracks, query);
+  const existingTrackIds = new Set(playlist.tracks.map((t) => t.id));
 
   return (
     <LibraryPageShell
       header={
         <LibraryPageHeader
-          title={
-            <span className="truncate text-sm font-medium">
-              {playlist.name}
-            </span>
-          }
+          breadcrumb={[
+            { label: "Playlist" },
+            { label: playlist.name },
+          ]}
           search={
             <SearchField value={query} basePath={`/playlist/${playlist.id}`} />
           }
           actions={
-            <Button variant="ghost" size="icon-sm" aria-label="Shuffle">
-              <IconArrowsShuffle />
-            </Button>
+            <>
+              <AddTracksToPlaylistDrawer
+                playlistId={playlist.id}
+                libraryTracks={libraryTracks}
+                existingTrackIds={existingTrackIds}
+              />
+              <Button variant="ghost" size="icon-sm" aria-label="Shuffle">
+                <IconArrowsShuffle />
+              </Button>
+            </>
           }
         />
       }
       banner={
         <div className="flex items-center gap-3 bg-background px-4 py-3">
-          <CoverTile url={playlist.coverUrl} playlistId={playlist.id} />
+          <CoverTile
+            url={playlist.coverUrl}
+            name={playlist.name}
+            playlistId={playlist.id}
+          />
           <div>
             <TitleField playlistId={playlist.id} initialName={playlist.name} />
             <p className="text-xs text-muted-foreground sm:text-sm">
@@ -62,7 +81,7 @@ const PlaylistPage = async ({
         key={tracks.map((t) => t.id).join("\0")}
         tracks={tracks}
         query={query || undefined}
-        reorder={{ type: "playlist", playlistId: playlist.id }}
+        view={{ kind: "playlist", playlistId: playlist.id }}
       />
     </LibraryPageShell>
   );

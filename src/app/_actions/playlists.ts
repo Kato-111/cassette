@@ -37,7 +37,7 @@ export const renamePlaylistAction = async (
       data: { name: trimmed },
     });
     revalidateTag(CACHE_TAGS.playlists, "max");
-    revalidatePath(`/p/${id}`);
+    revalidatePath(`/playlist/${id}`);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
@@ -87,8 +87,50 @@ export const attachTrackAction = async (
     });
 
     revalidateTag(CACHE_TAGS.playlists, "max");
-    revalidatePath(`/p/${playlistId}`);
+    revalidatePath(`/playlist/${playlistId}`);
     return { ok: true };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+};
+
+export const attachTracksAction = async (
+  playlistId: string,
+  trackIds: string[],
+): Promise<ActionResult<{ added: number }>> => {
+  if (trackIds.length === 0) return { ok: true, added: 0 };
+
+  try {
+    const added = await prisma.$transaction(async (tx) => {
+      const existing = await tx.playlistTrack.findMany({
+        where: { playlistId, trackId: { in: trackIds } },
+        select: { trackId: true },
+      });
+      const taken = new Set(existing.map((e) => e.trackId));
+      const fresh = trackIds.filter((id) => !taken.has(id));
+      if (fresh.length === 0) return 0;
+
+      const last = await tx.playlistTrack.findFirst({
+        where: { playlistId },
+        orderBy: { order: "desc" },
+        select: { order: true },
+      });
+      const base = (last?.order ?? 0) + 1;
+
+      await tx.playlistTrack.createMany({
+        data: fresh.map((trackId, i) => ({
+          playlistId,
+          trackId,
+          order: base + i,
+        })),
+      });
+
+      return fresh.length;
+    });
+
+    revalidateTag(CACHE_TAGS.playlists, "max");
+    revalidatePath(`/playlist/${playlistId}`);
+    return { ok: true, added };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }
@@ -110,7 +152,7 @@ export const reorderPlaylistTracksAction = async (
       ),
     );
     revalidateTag(CACHE_TAGS.playlists, "max");
-    revalidatePath(`/p/${playlistId}`);
+    revalidatePath(`/playlist/${playlistId}`);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
@@ -120,13 +162,20 @@ export const reorderPlaylistTracksAction = async (
 export const detachTrackAction = async (
   playlistId: string,
   trackId: string,
+): Promise<ActionResult> => detachTracksAction(playlistId, [trackId]);
+
+export const detachTracksAction = async (
+  playlistId: string,
+  trackIds: string[],
 ): Promise<ActionResult> => {
+  if (trackIds.length === 0) return { ok: true };
+
   try {
-    await prisma.playlistTrack.delete({
-      where: { playlistId_trackId: { playlistId, trackId } },
+    await prisma.playlistTrack.deleteMany({
+      where: { playlistId, trackId: { in: trackIds } },
     });
     revalidateTag(CACHE_TAGS.playlists, "max");
-    revalidatePath(`/p/${playlistId}`);
+    revalidatePath(`/playlist/${playlistId}`);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: (err as Error).message };

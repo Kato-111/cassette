@@ -12,7 +12,7 @@ import {
 import { updateTrackFieldAction } from "@/app/_actions/tracks";
 import { uploadTrackArtworkAction } from "@/app/_actions/uploads";
 import { FavoriteButton } from "@/app/_components/favorite-button";
-import { useDeck } from "./deck-context";
+import { useDeck } from "@/contexts/deck-context";
 import { cn } from "@/lib/utils";
 
 type EditableField = "title" | "artist" | "album" | "genre";

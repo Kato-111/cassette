@@ -1,6 +1,6 @@
 import type { Playlist } from "@prisma/client";
 import { describe, expect, it } from "vitest";
-import { libraryReducer } from "@/app/_hooks/use-library";
+import { libraryReducer } from "@/contexts/library-context";
 
 const makePlaylist = (overrides: Partial<Playlist> = {}): Playlist => ({
   id: "pl-1",

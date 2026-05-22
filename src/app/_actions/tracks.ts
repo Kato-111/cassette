@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/db";
+import { deleteObject } from "@/lib/r2";
 import { CACHE_TAGS } from "@/lib/queries";
 
 type ActionResult<T = unknown> =
@@ -104,6 +105,48 @@ export const updateTrackFieldAction = async (
     await prisma.track.update({ where: { id }, data });
     revalidateTag(CACHE_TAGS.tracks, "max");
     revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+};
+
+export const deleteTrackAction = async (
+  trackId: string,
+): Promise<ActionResult> => deleteTracksAction([trackId]);
+
+export const deleteTracksAction = async (
+  trackIds: string[],
+): Promise<ActionResult> => {
+  if (trackIds.length === 0) return { ok: true };
+
+  try {
+    const tracks = await prisma.track.findMany({
+      where: { id: { in: trackIds } },
+      select: { id: true, storageKey: true },
+    });
+
+    await prisma.$transaction([
+      prisma.playlistTrack.deleteMany({
+        where: { trackId: { in: trackIds } },
+      }),
+      prisma.track.deleteMany({ where: { id: { in: trackIds } } }),
+    ]);
+
+    const results = await Promise.allSettled(
+      tracks.map((track) => deleteObject(track.storageKey)),
+    );
+    for (const result of results) {
+      if (result.status === "rejected") {
+        console.error("R2 delete failed:", result.reason);
+      }
+    }
+
+    revalidateTag(CACHE_TAGS.tracks, "max");
+    revalidateTag(CACHE_TAGS.playlists, "max");
+    revalidateTag(CACHE_TAGS.favorites, "max");
+    revalidatePath("/", "layout");
+    revalidatePath("/favorites");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: (err as Error).message };

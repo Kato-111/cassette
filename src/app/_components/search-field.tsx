@@ -13,9 +13,11 @@ import {
 export const SearchField = ({
   value: initialValue,
   basePath = "/",
+  preventAutoFocus = false,
 }: {
   value?: string;
   basePath?: string;
+  preventAutoFocus?: boolean;
 }) => {
   const router = useRouter();
   const [value, setValue] = useState(initialValue ?? "");
@@ -47,6 +49,7 @@ export const SearchField = ({
         onChange={(e) => setValue(e.currentTarget.value)}
         className="[&::-webkit-search-cancel-button]:appearance-none"
         aria-label="Search tracks"
+        tabIndex={preventAutoFocus ? -1 : undefined}
       />
       <InputGroupAddon align="inline-end">
         {value ? (

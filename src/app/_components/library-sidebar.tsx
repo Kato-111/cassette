@@ -36,7 +36,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sidebar,
   SidebarContent,
@@ -151,7 +150,11 @@ const MobileSearchField = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   return (
-    <SearchField value={searchParams.get("q") ?? ""} basePath={pathname} />
+    <SearchField
+      value={searchParams.get("q") ?? ""}
+      basePath={pathname}
+      preventAutoFocus
+    />
   );
 };
 
@@ -241,18 +244,27 @@ const navSpring = (reduceMotion: boolean | null, exiting = false) =>
     ? { duration: exiting ? 0.1 : 0.12 }
     : { type: "spring" as const, duration: exiting ? 0.2 : 0.25, bounce: 0 };
 
-const sidebarSectionMaxH = "max-h-[calc((100svh-var(--transport-h))*0.3)]";
+const SIDEBAR_LIST_MAX_H = "calc((100svh - var(--transport-h)) * 0.3)";
 
-const ScrollableSidebarSection = ({
+const LibrarySection = ({
+  label,
+  action,
   children,
 }: {
+  label: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) => (
-  <SidebarGroupContent className="min-h-0 flex-1 overflow-hidden">
-    <ScrollArea className="h-full min-h-0 w-full" scrollFade scrollbarGutter>
-      {children}
-    </ScrollArea>
-  </SidebarGroupContent>
+  <SidebarGroup className="relative">
+    <SidebarGroupLabel className="shrink-0">{label}</SidebarGroupLabel>
+    {action}
+    <SidebarGroupContent
+      className="overflow-x-hidden overflow-y-auto"
+      style={{ maxHeight: SIDEBAR_LIST_MAX_H, scrollbarGutter: "stable" }}
+    >
+      <SidebarMenu>{children}</SidebarMenu>
+    </SidebarGroupContent>
+  </SidebarGroup>
 );
 
 const useNavSlideDirection = (mode: "library" | "settings") => {
@@ -304,33 +316,18 @@ const LibraryNav = ({
         </SidebarGroupContent>
       </SidebarGroup>
 
-      <SidebarGroup
-        className={`flex min-h-0 flex-col overflow-hidden ${sidebarSectionMaxH}`}
-      >
-        <SidebarGroupLabel className="shrink-0">Playlists</SidebarGroupLabel>
-        <CreatePlaylistDialog />
-        <ScrollableSidebarSection>
-          <SidebarMenu>
-            {playlists.map((p) => (
-              <PlaylistRow key={p.id} playlist={p} />
-            ))}
-          </SidebarMenu>
-        </ScrollableSidebarSection>
-      </SidebarGroup>
+      <LibrarySection label="Playlists" action={<CreatePlaylistDialog />}>
+        {playlists.map((p) => (
+          <PlaylistRow key={p.id} playlist={p} />
+        ))}
+      </LibrarySection>
 
       {albums.length > 0 ? (
-        <SidebarGroup
-          className={`flex min-h-0 flex-col overflow-hidden ${sidebarSectionMaxH}`}
-        >
-          <SidebarGroupLabel className="shrink-0">Albums</SidebarGroupLabel>
-          <ScrollableSidebarSection>
-            <SidebarMenu>
-              {albums.map((album) => (
-                <AlbumRow key={album.id} album={album} />
-              ))}
-            </SidebarMenu>
-          </ScrollableSidebarSection>
-        </SidebarGroup>
+        <LibrarySection label="Albums">
+          {albums.map((album) => (
+            <AlbumRow key={album.id} album={album} />
+          ))}
+        </LibrarySection>
       ) : null}
     </div>
   );
@@ -388,7 +385,11 @@ export const LibrarySidebar = () => {
         </div>
         {isMobile ? (
           <div className="mt-2">
-            <Suspense fallback={<SearchField basePath={pathname} />}>
+            <Suspense
+              fallback={
+                <SearchField basePath={pathname} preventAutoFocus />
+              }
+            >
               <MobileSearchField />
             </Suspense>
           </div>

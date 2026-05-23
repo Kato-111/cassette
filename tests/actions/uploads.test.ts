@@ -54,7 +54,6 @@ describe("uploadTrackAction", () => {
       album: null,
       durationSec: 100,
       genre: null,
-      bpm: null,
       key: null,
       picture: null,
     });
@@ -107,7 +106,6 @@ describe("uploadTrackAction", () => {
       album: null,
       durationSec: 100,
       genre: null,
-      bpm: null,
       key: null,
       picture: { data: Buffer.from([1]), mime: "image/jpeg", ext: "jpg" },
     });

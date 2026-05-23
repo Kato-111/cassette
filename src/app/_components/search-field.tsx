@@ -15,7 +15,6 @@ export const SearchField = ({
   basePath = "/",
 }: {
   value?: string;
-  /** Path without query string (e.g. `/` or `/p/abc`). */
   basePath?: string;
 }) => {
   const router = useRouter();
@@ -29,9 +28,7 @@ export const SearchField = ({
   useEffect(() => {
     const handle = window.setTimeout(() => {
       router.replace(
-        value
-          ? `${basePath}?q=${encodeURIComponent(value)}`
-          : basePath,
+        value ? `${basePath}?q=${encodeURIComponent(value)}` : basePath,
       );
     }, 150);
     return () => window.clearTimeout(handle);

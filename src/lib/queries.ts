@@ -1,5 +1,11 @@
 import type { Track } from "@prisma/client";
+import {
+  buildAlbumSummaries,
+  decodeAlbumId,
+  type AlbumSummary,
+} from "./albums";
 import { prisma } from "./db";
+import { getAlbumSettings, getHiddenAlbumNames } from "./settings";
 
 export const CACHE_TAGS = {
   tracks: "tracks",
@@ -57,6 +63,73 @@ export const getPlaylistWithTracks = async (id: string) => {
 export type PlaylistWithTracks = NonNullable<
   Awaited<ReturnType<typeof getPlaylistWithTracks>>
 >;
+
+export type AlbumWithTracks = AlbumSummary & {
+  tracks: Track[];
+};
+
+export const getAllAlbums = async (): Promise<AlbumSummary[]> => {
+  const [tracks, settings] = await Promise.all([
+    prisma.track.findMany({
+      where: { album: { not: null } },
+      select: {
+        album: true,
+        artist: true,
+        artworkUrl: true,
+        durationSec: true,
+      },
+    }),
+    getAlbumSettings(),
+  ]);
+
+  return buildAlbumSummaries(tracks, {
+    minTracks: settings.minAlbumTracks,
+    hiddenNames: settings.hiddenAlbumNames,
+  });
+};
+
+export type AlbumSummaryWithVisibility = AlbumSummary & { isHidden: boolean };
+
+export const getAllAlbumsForSettings = async (): Promise<
+  AlbumSummaryWithVisibility[]
+> => {
+  const [tracks, hiddenNames] = await Promise.all([
+    prisma.track.findMany({
+      where: { album: { not: null } },
+      select: {
+        album: true,
+        artist: true,
+        artworkUrl: true,
+        durationSec: true,
+      },
+    }),
+    getHiddenAlbumNames(),
+  ]);
+
+  return buildAlbumSummaries(tracks, { minTracks: 1 }).map((album) => ({
+    ...album,
+    isHidden: hiddenNames.has(album.name),
+  }));
+};
+
+export const getAlbumWithTracks = async (
+  id: string,
+): Promise<AlbumWithTracks | null> => {
+  const decoded = decodeAlbumId(id);
+  if (!decoded) return null;
+
+  const tracks = await prisma.track.findMany({
+    where: { album: decoded.album },
+    orderBy: [{ artist: "asc" }, { title: "asc" }],
+  });
+
+  if (tracks.length <= 1) return null;
+
+  const [summary] = buildAlbumSummaries(tracks);
+  if (!summary) return null;
+
+  return { ...summary, tracks };
+};
 
 const scoreSearchField = (s: string | null | undefined, needle: string) => {
   if (!s) return -1;

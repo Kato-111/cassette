@@ -64,7 +64,6 @@ const syncOne = async (key: string, size: number) => {
       album: meta.album,
       durationSec: meta.durationSec,
       genre: meta.genre,
-      bpm: meta.bpm,
       key: meta.key,
       storageKey: key,
       isLocal: false,

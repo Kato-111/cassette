@@ -22,7 +22,6 @@ describe("extractMetadata", () => {
         artist: "  Tagged Artist  ",
         album: "  Tagged Album  ",
         genre: ["Rock"],
-        bpm: 128.4,
       },
       format: { duration: 200.6 },
     });
@@ -32,7 +31,6 @@ describe("extractMetadata", () => {
     expect(result.artist).toBe("Tagged Artist");
     expect(result.album).toBe("Tagged Album");
     expect(result.genre).toBe("Rock");
-    expect(result.bpm).toBe(128);
     expect(result.durationSec).toBe(201);
   });
 
@@ -47,7 +45,6 @@ describe("extractMetadata", () => {
     expect(result.artist).toBe("Unknown Artist");
     expect(result.album).toBeNull();
     expect(result.genre).toBeNull();
-    expect(result.bpm).toBeNull();
   });
 
   it("extracts embedded picture", async () => {

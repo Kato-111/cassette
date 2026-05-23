@@ -1,6 +1,6 @@
 "use client";
 
-import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
+import { IconList, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/menu";
 import { Separator } from "@/components/ui/separator";
+import { isTypingTarget } from "@/lib/keyboard";
 import { cn } from "@/lib/utils";
 
 type Playlist = { id: string; name: string };
@@ -22,6 +23,7 @@ type SelectionCommandBarProps = {
   removeLabel: string;
   removeDisabled: boolean;
   onAddToPlaylist: (playlistId: string) => void;
+  onAddToQueue: () => void;
   onRemove: () => void;
   onClear: () => void;
 };
@@ -39,6 +41,7 @@ export function SelectionCommandBar({
   removeLabel,
   removeDisabled,
   onAddToPlaylist,
+  onAddToQueue,
   onRemove,
   onClear,
 }: SelectionCommandBarProps) {
@@ -53,7 +56,9 @@ export function SelectionCommandBar({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClear();
+      if (e.key !== "Escape" || isTypingTarget(e.target)) return;
+      e.preventDefault();
+      onClear();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -130,6 +135,14 @@ export function SelectionCommandBar({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onAddToQueue}
+              className={COMMAND_BAR_BUTTON}
+            >
+              <IconList /> Add to queue
+            </Button>
             <Button
               variant="ghost"
               size="sm"

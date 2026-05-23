@@ -4,6 +4,7 @@ import { useCallback, useRef } from "react";
 import type { Track } from "@prisma/client";
 import { useDeck } from "@/contexts/deck-context";
 import { useTrackList } from "@/contexts/track-list-context";
+import { isTypingTarget } from "@/lib/keyboard";
 
 const TYPEAHEAD_TIMEOUT_MS = 500;
 const RESERVED_LETTERS = new Set(["j", "k", "x"]);
@@ -19,7 +20,6 @@ const isTypeaheadKey = (e: React.KeyboardEvent): boolean => {
 const focusRow = (el: HTMLTableRowElement | null) => {
   if (!el) return;
   el.focus({ preventScroll: true });
-  el.scrollIntoView({ block: "nearest" });
 };
 
 export const useTrackListKeyboard = () => {
@@ -28,12 +28,13 @@ export const useTrackListKeyboard = () => {
     focusedIndex,
     setFocusedId,
     getRowEl,
+    scrollToIndex,
     selectable,
     toggleSelected,
     addToSelection,
     selectedCount,
   } = useTrackList();
-  const { playTrack, togglePlayPause, currentTrack } = useDeck();
+  const { playFromContext, togglePlayPause, currentTrack } = useDeck();
 
   const typeaheadRef = useRef<{ buffer: string; timer: number | null }>({
     buffer: "",
@@ -45,9 +46,12 @@ export const useTrackListKeyboard = () => {
       if (index < 0 || index >= tracks.length) return;
       const track = tracks[index];
       setFocusedId(track.id);
-      focusRow(getRowEl(track.id));
+      scrollToIndex(index);
+      requestAnimationFrame(() => {
+        focusRow(getRowEl(track.id));
+      });
     },
-    [tracks, setFocusedId, getRowEl],
+    [tracks, setFocusedId, scrollToIndex, getRowEl],
   );
 
   const runTypeahead = useCallback(
@@ -79,6 +83,7 @@ export const useTrackListKeyboard = () => {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return;
       if (tracks.length === 0) return;
 
       const current = focusedIndex >= 0 ? focusedIndex : 0;
@@ -113,7 +118,7 @@ export const useTrackListKeyboard = () => {
         case "Enter": {
           if (focusedIndex < 0) return;
           e.preventDefault();
-          playTrack(tracks[focusedIndex]);
+          playFromContext(tracks, focusedIndex);
           return;
         }
         case " ": {
@@ -153,7 +158,7 @@ export const useTrackListKeyboard = () => {
       addToSelection,
       toggleSelected,
       moveTo,
-      playTrack,
+      playFromContext,
       togglePlayPause,
       currentTrack,
       runTypeahead,

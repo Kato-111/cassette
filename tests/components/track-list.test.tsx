@@ -4,17 +4,17 @@ import type { Track } from "@prisma/client";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 const {
-  playTrackMock,
+  playFromContextMock,
   togglePlayPauseMock,
-  setQueueMock,
+  addToUserQueueMock,
   clearPlaybackMock,
   refreshMock,
   detachTracksActionMock,
   deleteTracksActionMock,
 } = vi.hoisted(() => ({
-  playTrackMock: vi.fn(),
+  playFromContextMock: vi.fn(),
   togglePlayPauseMock: vi.fn(),
-  setQueueMock: vi.fn(),
+  addToUserQueueMock: vi.fn(),
   clearPlaybackMock: vi.fn(),
   refreshMock: vi.fn(),
   detachTracksActionMock: vi.fn().mockResolvedValue({ ok: true }),
@@ -30,9 +30,9 @@ vi.mock("@/contexts/deck-context", () => ({
   useDeck: () => ({
     currentTrack: deckState.currentTrack,
     isPlaying: deckState.isPlaying,
-    playTrack: playTrackMock,
+    playFromContext: playFromContextMock,
     togglePlayPause: togglePlayPauseMock,
-    setQueue: setQueueMock,
+    addToUserQueue: addToUserQueueMock,
     clearPlayback: clearPlaybackMock,
     setActivePane: vi.fn(),
     registerPaneRef: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock("@/contexts/deck-context", () => ({
 }));
 
 vi.mock("@/contexts/library-context", () => ({
-  useLibrary: () => ({ playlists: [] }),
+  useLibrary: () => ({ playlists: [], albums: [] }),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -64,6 +64,23 @@ vi.mock("next/image", () => ({
 }));
 
 import { TrackList } from "@/app/_components/track-list";
+import type { TrackListView } from "@/app/_components/track-list/types";
+
+const renderTrackList = (
+  tracks: Track[],
+  view: TrackListView,
+  options?: { query?: string; emptyMessage?: string },
+) =>
+  render(
+    <div style={{ display: "flex", flexDirection: "column", height: 600 }}>
+      <TrackList
+        tracks={tracks}
+        view={view}
+        query={options?.query}
+        emptyMessage={options?.emptyMessage}
+      />
+    </div>,
+  );
 
 const makeTrack = (overrides: Partial<Track> = {}): Track => ({
   id: "t1",
@@ -72,7 +89,6 @@ const makeTrack = (overrides: Partial<Track> = {}): Track => ({
   album: "Test Album",
   durationSec: 200,
   genre: null,
-  bpm: null,
   key: null,
   artworkUrl: null,
   storageKey: "audio/test.mp3",
@@ -103,49 +119,19 @@ describe("TrackList", () => {
   });
 
   it("shows remove from library on all tracks", async () => {
-    render(
-      <TrackList
-        tracks={[makeTrack()]}
-        view={{ kind: "library" }}
-      />,
-    );
+    renderTrackList([makeTrack()], { kind: "library" });
     await openOptionsMenu();
     expect(screen.getByText("Remove from library")).toBeInTheDocument();
   });
 
   it("calls deleteTracksAction when removing from library", async () => {
     const user = userEvent.setup();
-    render(
-      <TrackList
-        tracks={[makeTrack({ id: "t-1" })]}
-        view={{ kind: "library" }}
-      />,
-    );
+    renderTrackList([makeTrack({ id: "t-1" })], { kind: "library" });
     await openOptionsMenu();
     await user.click(screen.getByText("Remove from library"));
 
     await waitFor(() => {
       expect(deleteTracksActionMock).toHaveBeenCalledWith(["t-1"]);
-    });
-    expect(refreshMock).toHaveBeenCalled();
-  });
-
-  it("calls deleteTracksAction when removing an album from library", async () => {
-    const user = userEvent.setup();
-    render(
-      <TrackList
-        tracks={[
-          makeTrack({ id: "t-1", album: "Shared Album" }),
-          makeTrack({ id: "t-2", album: "Shared Album", title: "Other Song" }),
-        ]}
-        view={{ kind: "library" }}
-      />,
-    );
-    await openOptionsMenu();
-    await user.click(screen.getByText('Remove "Shared Album" from library'));
-
-    await waitFor(() => {
-      expect(deleteTracksActionMock).toHaveBeenCalledWith(["t-1", "t-2"]);
     });
     expect(refreshMock).toHaveBeenCalled();
   });
@@ -156,9 +142,7 @@ describe("TrackList", () => {
     const track = makeTrack({ id: "t-1", title: "Gone Song" });
     deckState = { currentTrack: track, isPlaying: true };
 
-    render(
-      <TrackList tracks={[track]} view={{ kind: "library" }} />,
-    );
+    renderTrackList([track], { kind: "library" });
     await openOptionsMenu();
     await user.click(screen.getByText("Remove from library"));
 
@@ -166,70 +150,58 @@ describe("TrackList", () => {
       expect(deleteTracksActionMock).toHaveBeenCalledWith(["t-1"]);
     });
     expect(screen.getByText("Gone Song")).toBeInTheDocument();
-    expect(playTrackMock).not.toHaveBeenCalled();
+    expect(playFromContextMock).not.toHaveBeenCalled();
     expect(clearPlaybackMock).not.toHaveBeenCalled();
     expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it("shows empty state", () => {
-    render(<TrackList tracks={[]} view={{ kind: "library" }} />);
+    renderTrackList([], { kind: "library" });
     expect(screen.getByText("No tracks yet.")).toBeInTheDocument();
   });
 
-  it("clicking row calls playTrack", () => {
+  it("clicking row calls playFromContext", () => {
     const track = makeTrack();
-    const { container } = render(
-      <TrackList tracks={[track]} view={{ kind: "favorites" }} />,
-    );
+    const { container } = renderTrackList([track], { kind: "favorites" });
     const row = container.querySelector(
       '[data-slot="table-body"] [data-slot="table-row"]',
     );
     fireEvent.click(row!);
-    expect(playTrackMock).toHaveBeenCalledWith(track);
+    expect(playFromContextMock).toHaveBeenCalledWith([track], 0);
   });
 
   it("clicking current paused row calls togglePlayPause", () => {
     const track = makeTrack();
     deckState = { currentTrack: track, isPlaying: false };
-    const { container } = render(
-      <TrackList tracks={[track]} view={{ kind: "favorites" }} />,
-    );
+    const { container } = renderTrackList([track], { kind: "favorites" });
     const row = container.querySelector('[data-state="selected"]');
     fireEvent.click(row!);
     expect(togglePlayPauseMock).toHaveBeenCalled();
-    expect(playTrackMock).not.toHaveBeenCalled();
+    expect(playFromContextMock).not.toHaveBeenCalled();
   });
 
   it("does not show remove options on favorites", async () => {
-    render(
-      <TrackList tracks={[makeTrack()]} view={{ kind: "favorites" }} />,
-    );
+    renderTrackList([makeTrack()], { kind: "favorites" });
     await openOptionsMenu();
     expect(screen.queryByText("Remove from playlist")).not.toBeInTheDocument();
     expect(screen.queryByText("Remove from library")).not.toBeInTheDocument();
   });
 
-  it("shows remove from playlist in playlist context", async () => {
-    render(
-      <TrackList
-        tracks={[makeTrack()]}
-        view={{ kind: "playlist", playlistId: "pl-1" }}
-      />,
-    );
+  it("shows remove from this playlist in playlist context", async () => {
+    renderTrackList([makeTrack()], { kind: "playlist", playlistId: "pl-1" });
     await openOptionsMenu();
-    expect(screen.getByText("Remove from playlist")).toBeInTheDocument();
+    expect(screen.getByText("Remove from this playlist")).toBeInTheDocument();
+    expect(screen.getByText("Remove from library")).toBeInTheDocument();
   });
 
   it("calls detachTracksAction when removing a single track", async () => {
     const user = userEvent.setup();
-    render(
-      <TrackList
-        tracks={[makeTrack({ id: "t-1" })]}
-        view={{ kind: "playlist", playlistId: "pl-1" }}
-      />,
-    );
+    renderTrackList([makeTrack({ id: "t-1" })], {
+      kind: "playlist",
+      playlistId: "pl-1",
+    });
     await openOptionsMenu();
-    await user.click(screen.getByText("Remove from playlist"));
+    await user.click(screen.getByText("Remove from this playlist"));
 
     await waitFor(() => {
       expect(detachTracksActionMock).toHaveBeenCalledWith("pl-1", ["t-1"]);
@@ -237,41 +209,31 @@ describe("TrackList", () => {
     expect(refreshMock).toHaveBeenCalled();
   });
 
-  it("shows album remove when album is set", async () => {
-    render(
-      <TrackList
-        tracks={[makeTrack({ album: "Shared Album" })]}
-        view={{ kind: "playlist", playlistId: "pl-1" }}
-      />,
-    );
+  it("calls deleteTracksAction when removing from library in playlist context", async () => {
+    const user = userEvent.setup();
+    renderTrackList([makeTrack({ id: "t-1" })], {
+      kind: "playlist",
+      playlistId: "pl-1",
+    });
     await openOptionsMenu();
-    expect(
-      screen.getByText('Remove "Shared Album" from playlist'),
-    ).toBeInTheDocument();
-  });
+    await user.click(screen.getByText("Remove from library"));
 
-  it("hides album remove when album is null", async () => {
-    render(
-      <TrackList
-        tracks={[makeTrack({ album: null })]}
-        view={{ kind: "playlist", playlistId: "pl-1" }}
-      />,
-    );
-    await openOptionsMenu();
-    expect(screen.queryByText(/Remove ".*" from playlist/)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(deleteTracksActionMock).toHaveBeenCalledWith(["t-1"]);
+    });
+    expect(detachTracksActionMock).not.toHaveBeenCalled();
+    expect(refreshMock).toHaveBeenCalled();
   });
 
   it("selects multiple rows via their checkboxes", async () => {
     const user = userEvent.setup();
-    render(
-      <TrackList
-        tracks={[
-          makeTrack({ id: "t-1", title: "Song One" }),
-          makeTrack({ id: "t-2", title: "Song Two" }),
-          makeTrack({ id: "t-3", title: "Song Three" }),
-        ]}
-        view={{ kind: "playlist", playlistId: "pl-1" }}
-      />,
+    renderTrackList(
+      [
+        makeTrack({ id: "t-1", title: "Song One" }),
+        makeTrack({ id: "t-2", title: "Song Two" }),
+        makeTrack({ id: "t-3", title: "Song Three" }),
+      ],
+      { kind: "playlist", playlistId: "pl-1" },
     );
 
     const cbA = screen.getByRole("checkbox", { name: "Select Song One" });
@@ -290,27 +252,4 @@ describe("TrackList", () => {
     expect(cbC).toHaveAttribute("data-checked");
   });
 
-  it("calls detachTracksAction when removing an album", async () => {
-    const user = userEvent.setup();
-    render(
-      <TrackList
-        tracks={[
-          makeTrack({ id: "t-1", album: "Shared Album" }),
-          makeTrack({ id: "t-2", album: "Shared Album", title: "Other Song" }),
-          makeTrack({ id: "t-3", album: "Other Album", title: "Different" }),
-        ]}
-        view={{ kind: "playlist", playlistId: "pl-1" }}
-      />,
-    );
-    await openOptionsMenu();
-    await user.click(screen.getByText('Remove "Shared Album" from playlist'));
-
-    await waitFor(() => {
-      expect(detachTracksActionMock).toHaveBeenCalledWith("pl-1", [
-        "t-1",
-        "t-2",
-      ]);
-    });
-    expect(refreshMock).toHaveBeenCalled();
-  });
 });

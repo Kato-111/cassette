@@ -14,7 +14,6 @@ model Track {
   album       String?
   durationSec Int
   genre       String?
-  bpm         Int?
   key         String?
   artworkUrl     String?
   storageKey     String   @unique
@@ -63,4 +62,17 @@ model PlaylistTrack {
   @@unique([playlistId, trackId])
   @@index([playlistId, order])
   @@map("CollectionTrack")
+}
+
+model AppSetting {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model HiddenAlbum {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  albumName String   @unique
+  createdAt DateTime @default(now())
 }

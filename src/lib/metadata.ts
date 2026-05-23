@@ -6,7 +6,6 @@ export interface ExtractedMetadata {
   album: string | null;
   durationSec: number;
   genre: string | null;
-  bpm: number | null;
   key: string | null;
   picture: {
     data: Buffer;
@@ -38,7 +37,6 @@ export const extractMetadata = async (
     album: c.album?.trim() || null,
     durationSec: Math.round(meta.format.duration ?? 0),
     genre: c.genre?.[0]?.trim() || null,
-    bpm: c.bpm ? Math.round(c.bpm) : null,
     key: (c as { key?: string }).key ?? null,
     picture,
   };

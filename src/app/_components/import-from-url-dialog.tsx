@@ -29,10 +29,10 @@ export const ImportFromUrlDialog = ({
   onOpenChange,
   playlistId,
   title = "Import from URL",
-  description = "Paste a YouTube playlist or video URL. Tracks will be added to your library.",
+  description = "Paste a YouTube or Spotify playlist, album, or track URL. Tracks will be added to your library.",
 }: ImportFromUrlDialogProps) => {
   const copy = playlistId
-    ? "Paste a YouTube playlist or video URL. Tracks will be added to this playlist."
+    ? "Paste a YouTube or Spotify playlist, album, or track URL. Tracks will be added to this playlist."
     : description;
 
   const importState = useUrlImport({
@@ -71,7 +71,7 @@ export const ImportFromUrlDialog = ({
                 type="url"
                 value={importState.url}
                 onChange={(e) => importState.setUrl(e.target.value)}
-                placeholder="https://www.youtube.com/playlist?list=..."
+                placeholder="https://open.spotify.com/playlist/... or youtube.com/..."
                 autoFocus
                 required
                 disabled={importState.loading}

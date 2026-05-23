@@ -74,7 +74,7 @@ export const AddToLibraryDrawer = () => {
                 <div className="flex flex-col gap-1">
                   <p className="text-sm font-medium">Import from URL</p>
                   <p className="text-sm text-muted-foreground">
-                    Paste a YouTube playlist or video URL.
+                    Paste a YouTube or Spotify playlist, album, or track URL.
                   </p>
                 </div>
                 <Form className="flex flex-col gap-3" onSubmit={onUrlSubmit}>
@@ -85,7 +85,7 @@ export const AddToLibraryDrawer = () => {
                       type="url"
                       value={urlImport.url}
                       onChange={(e) => urlImport.setUrl(e.target.value)}
-                      placeholder="https://www.youtube.com/watch?v=..."
+                      placeholder="https://open.spotify.com/playlist/... or youtube.com/..."
                       disabled={urlImport.loading}
                     />
                   </Field>

@@ -1,13 +1,16 @@
 "use client";
 
 import {
+  IconArrowLeft,
   IconDots,
-  IconHeart,
+  IconHeartFilled,
   IconLink,
   IconMusic,
   IconPlus,
+  IconSettings,
   IconTrash,
 } from "@tabler/icons-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, startTransition, useEffect, useRef, useState } from "react";
@@ -33,9 +36,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupAction,
   SidebarGroupContent,
@@ -57,6 +62,27 @@ import { useLibrary } from "@/contexts/library-context";
 import { SearchField } from "./search-field";
 import { PlaylistAvatar } from "./playlist-avatar";
 import { ImportFromUrlDialog } from "./import-from-url-dialog";
+import type { AlbumSummary } from "@/lib/albums";
+
+const AlbumRow = ({ album }: { album: AlbumSummary }) => {
+  const pathname = usePathname();
+  const isActive = pathname === `/album/${album.id}`;
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        isActive={isActive}
+        size="sm"
+        render={<Link href={`/album/${album.id}`} prefetch tabIndex={0} />}
+      >
+        <PlaylistAvatar name={album.name} coverUrl={album.coverUrl} />
+        <span className="truncate" title={`${album.name} · ${album.artist}`}>
+          {album.name}
+        </span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+};
 
 const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
   const pathname = usePathname();
@@ -210,12 +236,140 @@ const CreatePlaylistDialog = () => {
   );
 };
 
+const navSpring = (reduceMotion: boolean | null, exiting = false) =>
+  reduceMotion
+    ? { duration: exiting ? 0.1 : 0.12 }
+    : { type: "spring" as const, duration: exiting ? 0.2 : 0.25, bounce: 0 };
+
+const sidebarSectionMaxH = "max-h-[calc((100svh-var(--transport-h))*0.3)]";
+
+const ScrollableSidebarSection = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => (
+  <SidebarGroupContent className="min-h-0 flex-1 overflow-hidden">
+    <ScrollArea className="h-full min-h-0 w-full" scrollFade scrollbarGutter>
+      {children}
+    </ScrollArea>
+  </SidebarGroupContent>
+);
+
+const useNavSlideDirection = (mode: "library" | "settings") => {
+  const prevModeRef = useRef(mode);
+  const directionRef = useRef<1 | -1>(1);
+
+  if (prevModeRef.current !== mode) {
+    directionRef.current = mode === "settings" ? 1 : -1;
+    prevModeRef.current = mode;
+  }
+
+  return directionRef.current;
+};
+
+const LibraryNav = ({
+  playlists,
+  albums,
+}: {
+  playlists: Playlist[];
+  albums: ReturnType<typeof useLibrary>["albums"];
+}) => {
+  const pathname = usePathname();
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <SidebarGroup className="shrink-0">
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                isActive={pathname === "/"}
+                size="sm"
+                render={<Link href="/" prefetch tabIndex={0} />}
+              >
+                <IconMusic />
+                <span>All Tracks</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                isActive={pathname === "/favorites"}
+                size="sm"
+                render={<Link href="/favorites" prefetch tabIndex={0} />}
+              >
+                <IconHeartFilled />
+                <span>Favorites</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <SidebarGroup
+        className={`flex min-h-0 flex-col overflow-hidden ${sidebarSectionMaxH}`}
+      >
+        <SidebarGroupLabel className="shrink-0">Playlists</SidebarGroupLabel>
+        <CreatePlaylistDialog />
+        <ScrollableSidebarSection>
+          <SidebarMenu>
+            {playlists.map((p) => (
+              <PlaylistRow key={p.id} playlist={p} />
+            ))}
+          </SidebarMenu>
+        </ScrollableSidebarSection>
+      </SidebarGroup>
+
+      {albums.length > 0 ? (
+        <SidebarGroup
+          className={`flex min-h-0 flex-col overflow-hidden ${sidebarSectionMaxH}`}
+        >
+          <SidebarGroupLabel className="shrink-0">Albums</SidebarGroupLabel>
+          <ScrollableSidebarSection>
+            <SidebarMenu>
+              {albums.map((album) => (
+                <AlbumRow key={album.id} album={album} />
+              ))}
+            </SidebarMenu>
+          </ScrollableSidebarSection>
+        </SidebarGroup>
+      ) : null}
+    </div>
+  );
+};
+
+const SettingsNav = () => {
+  const pathname = usePathname();
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>Settings</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={pathname === "/settings"}
+              size="sm"
+              render={<Link href="/settings" prefetch tabIndex={0} />}
+            >
+              <IconMusic />
+              <span>Albums</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+};
+
 export const LibrarySidebar = () => {
-  const { playlists } = useLibrary();
+  const { playlists, albums } = useLibrary();
   const pathname = usePathname();
   const navRef = useRef<HTMLDivElement>(null);
   const { registerPaneRef, handlePaneKey, setActivePane } = useDeck();
   const { isMobile } = useSidebar();
+  const reduceMotion = useReducedMotion();
+  const mode: "library" | "settings" = pathname.startsWith("/settings")
+    ? "settings"
+    : "library";
+  const direction = useNavSlideDirection(mode);
 
   useEffect(() => {
     registerPaneRef("sidebar", navRef);
@@ -226,9 +380,9 @@ export const LibrarySidebar = () => {
       collapsible="offcanvas"
       variant="floating"
       className="h-[calc(100svh-var(--transport-h))] pr-0"
-      innerClassName="rounded-xl border border-white/12 bg-background shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_4px_12px_rgb(0_0_0/0.6)]"
+      innerClassName="flex h-full flex-col rounded-xl border border-white/12 bg-background shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_4px_12px_rgb(0_0_0/0.6)]"
     >
-      <SidebarHeader>
+      <SidebarHeader className="shrink-0">
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold font-ephesis">Cassette</h1>
         </div>
@@ -242,49 +396,73 @@ export const LibrarySidebar = () => {
       </SidebarHeader>
       <SidebarContent
         ref={navRef}
+        scrollable={false}
         onClick={() => setActivePane("sidebar")}
         onKeyDown={(e) => handlePaneKey(e, "sidebar")}
-        className="mt-4"
+        className="mt-4 min-h-0 flex-1 overflow-hidden"
       >
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={pathname === "/"}
-                  size="sm"
-                  render={<Link href="/" prefetch tabIndex={0} />}
-                >
-                  <IconMusic />
-                  <span>All Tracks</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={pathname === "/favorites"}
-                  size="sm"
-                  render={<Link href="/favorites" prefetch tabIndex={0} />}
-                >
-                  <IconHeart />
-                  <span>Favorites</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Playlists</SidebarGroupLabel>
-          <CreatePlaylistDialog />
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {playlists.map((p) => (
-                <PlaylistRow key={p.id} playlist={p} />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <div className="grid min-h-0 flex-1 auto-rows-fr overflow-x-clip">
+          <AnimatePresence initial={false} custom={direction}>
+            <motion.div
+              key={mode}
+              custom={direction}
+              className="col-start-1 row-start-1 flex h-full min-h-0 w-full min-w-0 flex-col gap-2"
+              variants={{
+                enter: (dir: 1 | -1) => ({
+                  opacity: 0,
+                  x: reduceMotion ? 0 : `${dir * 100}%`,
+                  transition: navSpring(reduceMotion),
+                }),
+                center: {
+                  opacity: 1,
+                  x: 0,
+                  transition: navSpring(reduceMotion),
+                },
+                exit: (dir: 1 | -1) => ({
+                  opacity: 0,
+                  x: reduceMotion ? 0 : `${-dir * 100}%`,
+                  transition: navSpring(reduceMotion, true),
+                }),
+              }}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              style={{ willChange: "transform, opacity" }}
+            >
+              {mode === "library" ? (
+                <LibraryNav playlists={playlists} albums={albums} />
+              ) : (
+                <SettingsNav />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </SidebarContent>
+      <SidebarFooter className="shrink-0">
+        <SidebarMenu>
+          {mode === "settings" ? (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                size="sm"
+                render={<Link href="/" prefetch tabIndex={0} />}
+              >
+                <IconArrowLeft />
+                <span>Back to library</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ) : null}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={mode === "settings"}
+              size="sm"
+              render={<Link href="/settings" prefetch tabIndex={0} />}
+            >
+              <IconSettings />
+              <span>Settings</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 };

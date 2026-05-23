@@ -54,35 +54,6 @@ describe("updateTrackFieldAction", () => {
     expect(result).toEqual({ ok: false, error: "Field not editable: storageKey" });
   });
 
-  it("parses BPM: empty to null, valid number, invalid error", async () => {
-    const empty = new FormData();
-    empty.set("trackId", "t1");
-    empty.set("field", "bpm");
-    empty.set("bpm", "  ");
-    await updateTrackFieldAction(null, empty);
-    expect(prismaMock.track.update).toHaveBeenCalledWith({
-      where: { id: "t1" },
-      data: { bpm: null },
-    });
-
-    const valid = new FormData();
-    valid.set("trackId", "t1");
-    valid.set("field", "bpm");
-    valid.set("bpm", "120");
-    await updateTrackFieldAction(null, valid);
-    expect(prismaMock.track.update).toHaveBeenCalledWith({
-      where: { id: "t1" },
-      data: { bpm: 120 },
-    });
-
-    const invalid = new FormData();
-    invalid.set("trackId", "t1");
-    invalid.set("field", "bpm");
-    invalid.set("bpm", "abc");
-    const result = await updateTrackFieldAction(null, invalid);
-    expect(result).toEqual({ ok: false, error: "BPM must be a number" });
-  });
-
   it("trims text fields and converts empty to null", async () => {
     const fd = new FormData();
     fd.set("trackId", "t1");

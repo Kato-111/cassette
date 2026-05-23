@@ -110,7 +110,6 @@ export const uploadTrackAction = async (
         album: meta.album,
         durationSec: meta.durationSec,
         genre: meta.genre,
-        bpm: meta.bpm,
         key: meta.key,
         storageKey,
         libraryOrder: (lastInLibrary?.libraryOrder ?? -1) + 1,

@@ -11,12 +11,12 @@ const makeTrack = (overrides: Partial<Track> = {}): Track => ({
   album: null,
   durationSec: 120,
   genre: null,
-  bpm: null,
   key: null,
   artworkUrl: null,
   storageKey: "audio/one.mp3",
   libraryOrder: 0,
   isLocal: false,
+  isFavorite: false,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,
@@ -63,13 +63,15 @@ const DeckHarness = ({
     if (!audioRef.current) {
       audioRef.current = createMockAudio();
     }
-    deck.setQueue(tracks);
     deck.setAudioElement(audioRef.current);
-  }, [deck, tracks, audioRef]);
+  }, [deck, audioRef]);
 
   return (
     <div>
-      <button type="button" onClick={() => deck.playTrack(tracks[0]!)}>
+      <button
+        type="button"
+        onClick={() => deck.playFromContext(tracks, 0)}
+      >
         play-first
       </button>
       <button type="button" onClick={() => deck.playNextTrack()}>
@@ -81,7 +83,22 @@ const DeckHarness = ({
       <button type="button" onClick={() => deck.togglePlayPause()}>
         toggle
       </button>
+      <button
+        type="button"
+        onClick={() => deck.addToUserQueue([tracks[1]!])}
+      >
+        queue-second
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          deck.playFromContext(tracks, 1)
+        }
+      >
+        play-second
+      </button>
       <span data-testid="current">{deck.currentTrack?.title ?? "none"}</span>
+      <span data-testid="queue-count">{deck.userQueue.length}</span>
     </div>
   );
 };
@@ -101,7 +118,7 @@ describe("DeckProvider", () => {
     document.body.innerHTML = "";
   });
 
-  it("playTrack sets currentTrack, src, and calls play", async () => {
+  it("playFromContext sets currentTrack, src, and calls play", async () => {
     const tracks = [
       makeTrack({ id: "t1", storageKey: "audio/one.mp3" }),
       makeTrack({ id: "t2", title: "Track Two", storageKey: "audio/two.mp3" }),
@@ -117,7 +134,7 @@ describe("DeckProvider", () => {
     expect(audioRef.current?.play).toHaveBeenCalled();
   });
 
-  it("playNextTrack and playPreviousTrack wrap queue", async () => {
+  it("playNextTrack advances within context without wrapping", async () => {
     const tracks = [
       makeTrack({ id: "t1", title: "First" }),
       makeTrack({ id: "t2", title: "Second" }),
@@ -133,9 +150,80 @@ describe("DeckProvider", () => {
     expect(screen.getByTestId("current")).toHaveTextContent("Second");
 
     await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "next" }));
+    });
+    expect(screen.getByTestId("current")).toHaveTextContent("Second");
+  });
+
+  it("playPreviousTrack moves within context only", async () => {
+    const tracks = [
+      makeTrack({ id: "t1", title: "First" }),
+      makeTrack({ id: "t2", title: "Second" }),
+    ];
+    renderDeck(tracks);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "play-second" }));
+    });
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "prev" }));
     });
     expect(screen.getByTestId("current")).toHaveTextContent("First");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "prev" }));
+    });
+    expect(screen.getByTestId("current")).toHaveTextContent("First");
+  });
+
+  it("user queue plays before context next", async () => {
+    const tracks = [
+      makeTrack({ id: "t1", title: "First" }),
+      makeTrack({ id: "t2", title: "Second" }),
+      makeTrack({ id: "t3", title: "Third" }),
+    ];
+    renderDeck(tracks);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "play-first" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "queue-second" }));
+    });
+    expect(screen.getByTestId("queue-count")).toHaveTextContent("1");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "next" }));
+    });
+    expect(screen.getByTestId("current")).toHaveTextContent("Second");
+    expect(screen.getByTestId("queue-count")).toHaveTextContent("0");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "next" }));
+    });
+    expect(screen.getByTestId("current")).toHaveTextContent("Third");
+  });
+
+  it("playFromContext clears user queue", async () => {
+    const tracks = [
+      makeTrack({ id: "t1", title: "First" }),
+      makeTrack({ id: "t2", title: "Second" }),
+    ];
+    renderDeck(tracks);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "play-first" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "queue-second" }));
+    });
+    expect(screen.getByTestId("queue-count")).toHaveTextContent("1");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "play-second" }));
+    });
+    expect(screen.getByTestId("queue-count")).toHaveTextContent("0");
+    expect(screen.getByTestId("current")).toHaveTextContent("Second");
   });
 
   it("togglePlayPause respects paused state", async () => {
@@ -192,15 +280,19 @@ describe("DeckProvider", () => {
     expect(focusSpy).not.toHaveBeenCalled();
   });
 
-  it("ended event advances to next track", async () => {
+  it("ended event advances to user queue then context", async () => {
     const tracks = [
       makeTrack({ id: "t1", title: "First" }),
-      makeTrack({ id: "t2", title: "Second" }),
+      makeTrack({ id: "t2", title: "Queued" }),
+      makeTrack({ id: "t3", title: "Third" }),
     ];
     const audioRef = renderDeck(tracks);
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "play-first" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "queue-second" }));
     });
 
     await act(async () => {
@@ -208,7 +300,15 @@ describe("DeckProvider", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId("current")).toHaveTextContent("Second");
+      expect(screen.getByTestId("current")).toHaveTextContent("Queued");
+    });
+
+    await act(async () => {
+      audioRef.current?.dispatch("ended");
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("current")).toHaveTextContent("Third");
     });
   });
 });

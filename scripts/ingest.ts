@@ -51,7 +51,6 @@ const ingestOne = async (file: string) => {
       album: meta.album,
       durationSec: meta.durationSec,
       genre: meta.genre,
-      bpm: meta.bpm,
       key: meta.key,
       storageKey,
       isLocal: false,

@@ -81,20 +81,9 @@ export const updateTrackFieldAction = async (
     return { ok: false, error: "Missing value" };
   }
 
-  let data: Record<string, string | number | null>;
+  let data: Record<string, string | null>;
 
-  if (field === "bpm") {
-    const trimmed = raw.trim();
-    if (trimmed === "") {
-      data = { bpm: null };
-    } else {
-      const n = Number.parseInt(trimmed, 10);
-      if (!Number.isFinite(n)) {
-        return { ok: false, error: "BPM must be a number" };
-      }
-      data = { bpm: n };
-    }
-  } else if (EDITABLE_TEXT_FIELDS.has(field)) {
+  if (EDITABLE_TEXT_FIELDS.has(field)) {
     const trimmed = raw.trim();
     data = { [field]: trimmed === "" ? null : trimmed };
   } else {

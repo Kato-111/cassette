@@ -9,7 +9,6 @@ const makeTrack = (overrides: Partial<Track> = {}): Track => ({
   album: "Gamma Album",
   durationSec: 180,
   genre: null,
-  bpm: null,
   key: null,
   artworkUrl: null,
   storageKey: "audio/test.mp3",

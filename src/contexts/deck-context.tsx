@@ -12,20 +12,38 @@ import {
   type RefObject,
 } from "react";
 import type { Track } from "@prisma/client";
+import { isTypingTarget } from "@/lib/keyboard";
 
 export type Pane = "sidebar" | "tracklist";
+
+export type QueueItem = {
+  id: string;
+  track: Track;
+  /** True when explicitly added via addToUserQueue (shown in the queue panel). */
+  inserted?: boolean;
+};
+
+type PlaybackState = {
+  entries: QueueItem[];
+  index: number;
+};
 
 type DeckContextValue = {
   isPlaying: boolean;
   currentTrack: Track | null;
   currentTime: number;
   duration: number;
+  userQueue: QueueItem[];
   togglePlayPause: () => void;
   playTrack: (track: Track) => void;
+  playFromContext: (tracks: Track[], index: number) => void;
   playNextTrack: () => void;
   playPreviousTrack: () => void;
   setCurrentTime: (time: number) => void;
-  setQueue: (tracks: Track[]) => void;
+  addToUserQueue: (tracks: Track[]) => void;
+  removeFromUserQueue: (itemId: string) => void;
+  reorderUserQueue: (activeId: string, overId: string) => void;
+  clearUserQueue: () => void;
   patchTrack: (id: string, partial: Partial<Track>) => void;
   clearPlayback: () => void;
   audioRef: RefObject<HTMLAudioElement | null>;
@@ -38,10 +56,25 @@ type DeckContextValue = {
 
 const DeckContext = createContext<DeckContextValue | undefined>(undefined);
 
+const EMPTY_PLAYBACK: PlaybackState = { entries: [], index: -1 };
+
 const streamUrlFor = (storageKey: string): string => {
   const segments = storageKey.split("/").map(encodeURIComponent).join("/");
   return `/api/stream/${segments}`;
 };
+
+const makeQueueItem = (track: Track, inserted = false): QueueItem => ({
+  id: crypto.randomUUID(),
+  track,
+  ...(inserted ? { inserted: true } : {}),
+});
+
+const patchQueueItemTrack = (
+  item: QueueItem,
+  id: string,
+  partial: Partial<Track>,
+): QueueItem =>
+  item.track.id === id ? { ...item, track: { ...item.track, ...partial } } : item;
 
 /** play() rejects with AbortError when pause() runs before it settles — ignore that. */
 const safePlay = (audio: HTMLAudioElement): void => {
@@ -69,6 +102,8 @@ const usePaneNav = () => {
 
   const handlePaneKey = useCallback(
     (e: React.KeyboardEvent, pane: Pane) => {
+      if (isTypingTarget(e.target)) return;
+
       const current = refs.current[pane];
       if (!current?.current) return;
 
@@ -125,13 +160,24 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
-  const [queue, setQueue] = useState<Track[]>([]);
+  const [playback, setPlayback] = useState<PlaybackState>(EMPTY_PLAYBACK);
   const audioRef = useRef<HTMLAudioElement>(null);
   const audioCleanupRef = useRef<(() => void) | null>(null);
   const playNextTrackRef = useRef<() => void>(() => {});
+  const playbackRef = useRef(playback);
+
+  playbackRef.current = playback;
 
   const { activePane, setActivePane, registerPaneRef, handlePaneKey } =
     usePaneNav();
+
+  const userQueue = useMemo(
+    () =>
+      playback.entries
+        .slice(playback.index + 1)
+        .filter((entry) => entry.inserted),
+    [playback.entries, playback.index],
+  );
 
   const togglePlayPause = useCallback(() => {
     const audio = audioRef.current;
@@ -156,6 +202,19 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
       setActivePane("tracklist");
     },
     [setActivePane],
+  );
+
+  const playFromContext = useCallback(
+    (tracks: Track[], index: number) => {
+      const track = tracks[index];
+      if (!track) return;
+      setPlayback({
+        entries: tracks.map((t) => makeQueueItem(t)),
+        index,
+      });
+      playTrack(track);
+    },
+    [playTrack],
   );
 
   const setAudioElement = useCallback((audio: HTMLAudioElement | null) => {
@@ -190,24 +249,114 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const playNextTrack = useCallback(() => {
-    if (!currentTrack || queue.length === 0) return;
-    const i = queue.findIndex((t) => t.id === currentTrack.id);
-    const next = (i + 1) % queue.length;
-    playTrack(queue[next]);
-  }, [currentTrack, queue, playTrack]);
+    const { entries, index } = playbackRef.current;
+    if (index < 0 || index >= entries.length - 1) return;
+
+    const nextIndex = index + 1;
+    const next = entries[nextIndex];
+    if (!next) return;
+
+    setPlayback({ entries, index: nextIndex });
+    playTrack(next.track);
+  }, [playTrack]);
 
   const playPreviousTrack = useCallback(() => {
-    if (!currentTrack || queue.length === 0) return;
-    const i = queue.findIndex((t) => t.id === currentTrack.id);
-    const prev = (i - 1 + queue.length) % queue.length;
-    playTrack(queue[prev]);
-  }, [currentTrack, queue, playTrack]);
+    const { entries, index } = playbackRef.current;
+    if (index <= 0) return;
+
+    const prevIndex = index - 1;
+    const prev = entries[prevIndex];
+    if (!prev) return;
+
+    setPlayback({ entries, index: prevIndex });
+    playTrack(prev.track);
+  }, [playTrack]);
+
+  const addToUserQueue = useCallback(
+    (tracks: Track[]) => {
+      if (tracks.length === 0) return;
+
+      const { entries, index } = playbackRef.current;
+      if (index < 0 || !currentTrack) {
+        playFromContext(tracks, 0);
+        return;
+      }
+
+      setPlayback((prev) => {
+        let nextEntries = prev.entries;
+        let cursor = prev.index;
+
+        for (const track of tracks) {
+          const insertAt = cursor + 1;
+          const existing = nextEntries[insertAt];
+
+          if (existing?.track.id === track.id) {
+            nextEntries = nextEntries.map((entry, i) =>
+              i === insertAt ? { ...entry, inserted: true } : entry,
+            );
+          } else {
+            nextEntries = [
+              ...nextEntries.slice(0, insertAt),
+              makeQueueItem(track, true),
+              ...nextEntries.slice(insertAt),
+            ];
+          }
+          cursor += 1;
+        }
+
+        return { entries: nextEntries, index: prev.index };
+      });
+    },
+    [playFromContext, currentTrack],
+  );
+
+  const removeFromUserQueue = useCallback((itemId: string) => {
+    setPlayback((prev) => {
+      const removeIndex = prev.entries.findIndex((e) => e.id === itemId);
+      if (removeIndex < 0 || !prev.entries[removeIndex]?.inserted) return prev;
+
+      const entries = prev.entries.filter((e) => e.id !== itemId);
+      const index =
+        removeIndex <= prev.index ? Math.max(0, prev.index - 1) : prev.index;
+      return { entries, index };
+    });
+  }, []);
+
+  const reorderUserQueue = useCallback((activeId: string, overId: string) => {
+    setPlayback((prev) => {
+      const oldIndex = prev.entries.findIndex((e) => e.id === activeId);
+      const newIndex = prev.entries.findIndex((e) => e.id === overId);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return prev;
+
+      const active = prev.entries[oldIndex];
+      const over = prev.entries[newIndex];
+      if (!active?.inserted || !over?.inserted) return prev;
+      if (oldIndex <= prev.index || newIndex <= prev.index) return prev;
+
+      const entries = [...prev.entries];
+      const [moved] = entries.splice(oldIndex, 1);
+      entries.splice(newIndex, 0, moved!);
+      return { ...prev, entries };
+    });
+  }, []);
+
+  const clearUserQueue = useCallback(() => {
+    setPlayback((prev) => ({
+      entries: prev.entries.filter(
+        (entry, i) => i <= prev.index || !entry.inserted,
+      ),
+      index: prev.index,
+    }));
+  }, []);
 
   const patchTrack = useCallback((id: string, partial: Partial<Track>) => {
     setCurrentTrack((t) => (t?.id === id ? { ...t, ...partial } : t));
-    setQueue((tracks) =>
-      tracks.map((t) => (t.id === id ? { ...t, ...partial } : t)),
-    );
+    setPlayback((prev) => ({
+      ...prev,
+      entries: prev.entries.map((item) =>
+        patchQueueItemTrack(item, id, partial),
+      ),
+    }));
   }, []);
 
   const clearPlayback = useCallback(() => {
@@ -215,6 +364,7 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
     setCurrentTime(0);
     setAudioDuration(0);
     setIsPlaying(false);
+    setPlayback(EMPTY_PLAYBACK);
     const audio = audioRef.current;
     if (audio) {
       audio.pause();
@@ -231,10 +381,7 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
         e.preventDefault();
         togglePlayPause();
       } else if (e.key === "/") {
-        const target = e.target as HTMLElement | null;
-        if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA") {
-          return;
-        }
+        if (isTypingTarget(e.target)) return;
         e.preventDefault();
         const search =
           document.querySelector<HTMLInputElement>('input[type="search"]');
@@ -258,12 +405,17 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
       currentTrack,
       currentTime,
       duration,
+      userQueue,
       togglePlayPause,
       playTrack,
+      playFromContext,
       playNextTrack,
       playPreviousTrack,
       setCurrentTime,
-      setQueue,
+      addToUserQueue,
+      removeFromUserQueue,
+      reorderUserQueue,
+      clearUserQueue,
       patchTrack,
       clearPlayback,
       audioRef,
@@ -278,8 +430,10 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
       currentTrack,
       currentTime,
       duration,
+      userQueue,
       togglePlayPause,
       playTrack,
+      playFromContext,
       playNextTrack,
       playPreviousTrack,
       activePane,
@@ -287,6 +441,10 @@ export const DeckProvider = ({ children }: { children: ReactNode }) => {
       registerPaneRef,
       handlePaneKey,
       setAudioElement,
+      addToUserQueue,
+      removeFromUserQueue,
+      reorderUserQueue,
+      clearUserQueue,
       patchTrack,
       clearPlayback,
     ],

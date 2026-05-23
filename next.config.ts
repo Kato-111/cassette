@@ -1,3 +1,4 @@
+import { withSerwist } from "@serwist/turbopack";
 import type { NextConfig } from "next";
 
 const r2PublicHost = (() => {
@@ -16,6 +17,10 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "50mb",
     },
+    staleTimes: {
+      dynamic: 60,
+      static: 300,
+    },
   },
   images: r2PublicHost
     ? {
@@ -30,4 +35,4 @@ const nextConfig: NextConfig = {
     : undefined,
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);

@@ -13,6 +13,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { FavoriteButton } from "@/app/_components/favorite-button";
+import { QueueList } from "@/app/_playback/queue-list";
 import { useDeck } from "@/contexts/deck-context";
 import { ScrubBar, TransportButtons } from "./transport-bar";
 
@@ -21,34 +22,37 @@ const NowPlayingDrawerContent = () => {
   if (!currentTrack) return null;
 
   return (
-    <div className="flex h-full flex-col items-center gap-6">
-      <div className="aspect-square w-full max-w-xs overflow-hidden rounded-xl bg-muted shadow-2xl shadow-black/60">
-        {currentTrack.artworkUrl ? (
-          <Image
-            src={currentTrack.artworkUrl}
-            alt=""
-            width={400}
-            height={400}
-            unoptimized
-            className="h-full w-full object-cover"
-          />
-        ) : null}
-      </div>
-      <div className="flex w-full items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 text-center">
-          <h2 className="truncate text-xl font-semibold text-foreground">
-            {currentTrack.title}
-          </h2>
-          <p className="truncate text-sm text-muted-foreground">
-            {currentTrack.artist}
-          </p>
+    <div className="flex h-full min-h-0 flex-col gap-4">
+      <div className="flex shrink-0 flex-col items-center gap-4">
+        <div className="aspect-square w-full max-w-xs overflow-hidden rounded-xl bg-muted shadow-2xl shadow-black/60">
+          {currentTrack.artworkUrl ? (
+            <Image
+              src={currentTrack.artworkUrl}
+              alt=""
+              width={400}
+              height={400}
+              unoptimized
+              className="h-full w-full object-cover"
+            />
+          ) : null}
         </div>
-        <FavoriteButton
-          trackId={currentTrack.id}
-          isFavorite={currentTrack.isFavorite}
-        />
+        <div className="flex w-full items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 text-center">
+            <h2 className="truncate text-xl font-semibold text-foreground">
+              {currentTrack.title}
+            </h2>
+            <p className="truncate text-sm text-muted-foreground">
+              {currentTrack.artist}
+            </p>
+          </div>
+          <FavoriteButton
+            trackId={currentTrack.id}
+            isFavorite={currentTrack.isFavorite}
+          />
+        </div>
       </div>
-      <div className="mt-auto flex w-full flex-col items-center gap-4">
+      <QueueList className="min-h-0 flex-1" />
+      <div className="flex shrink-0 flex-col items-center gap-4">
         <div className="w-full">
           <ScrubBar />
         </div>
@@ -82,13 +86,7 @@ export const NowPlayingDrawer = ({ children }: { children: ReactNode }) => {
         className="row-span-2 row-start-1 h-full rounded-none border-t-0"
       >
         <DrawerTitle className="sr-only">Now playing</DrawerTitle>
-        <DrawerClose
-          aria-label="Close now playing"
-          className="absolute end-2 top-[max(env(safe-area-inset-top,0px),--spacing(2))] z-10"
-          render={<Button size="icon" variant="ghost" />}
-        >
-          <IconChevronDown />
-        </DrawerClose>
+
         <DrawerPanel
           scrollable={false}
           className="flex flex-1 flex-col pt-[calc(env(safe-area-inset-top,0px)+--spacing(6))]"

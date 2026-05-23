@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Playlist } from "@prisma/client";
+import type { AlbumSummary } from "@/lib/albums";
 
 type LibraryAction =
   | { type: "upsert"; playlist: Playlist }
@@ -16,6 +17,7 @@ type LibraryAction =
 
 type LibraryContextValue = {
   playlists: Playlist[];
+  albums: AlbumSummary[];
   upsertPlaylist: (playlist: Playlist) => void;
   patchPlaylist: (id: string, patch: Partial<Playlist>) => void;
   removePlaylist: (id: string) => void;
@@ -47,9 +49,11 @@ export const libraryReducer = (
 
 export const LibraryProvider = ({
   initialPlaylists,
+  initialAlbums,
   children,
 }: {
   initialPlaylists: Playlist[];
+  initialAlbums: AlbumSummary[];
   children: ReactNode;
 }) => {
   const [playlists, dispatch] = useOptimistic(initialPlaylists, libraryReducer);
@@ -57,13 +61,14 @@ export const LibraryProvider = ({
   const value = useMemo(
     () => ({
       playlists,
+      albums: initialAlbums,
       upsertPlaylist: (playlist: Playlist) =>
         dispatch({ type: "upsert", playlist }),
       patchPlaylist: (id: string, patch: Partial<Playlist>) =>
         dispatch({ type: "patch", id, patch }),
       removePlaylist: (id: string) => dispatch({ type: "remove", id }),
     }),
-    [playlists, dispatch],
+    [playlists, initialAlbums, dispatch],
   );
 
   return (

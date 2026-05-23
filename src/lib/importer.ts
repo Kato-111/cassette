@@ -11,7 +11,7 @@ export const importerBaseUrl = (): string => {
 };
 
 export const importerApiKey = (): string => {
-  const key = process.env.IMPORTER_API_KEY?.trim();
+  const key = process.env.IMPORTER_API_KEY?.trim().replace(/^["']|["']$/g, "");
   if (!key) throw new Error("IMPORTER_API_KEY is not configured");
   return key;
 };

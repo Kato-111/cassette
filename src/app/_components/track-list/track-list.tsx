@@ -3,13 +3,18 @@
 import {
   closestCenter,
   DndContext,
+  DragOverlay,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import type { Track } from "@prisma/client";
-import { useEffect, useId, useRef } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Frame } from "@/components/ui/frame";
 import {
   Table,
@@ -20,13 +25,11 @@ import {
 } from "@/components/ui/table";
 import { useDeck } from "@/contexts/deck-context";
 import { useLibrary } from "@/contexts/library-context";
-import {
-  TrackListProvider,
-  useTrackList,
-} from "@/contexts/track-list-context";
+import { TrackListProvider, useTrackList } from "@/contexts/track-list-context";
 import { cn } from "@/lib/utils";
 import { SelectionCommandBar } from "./selection-command-bar";
 import { TrackListTableBody } from "./track-list-table";
+import { TrackRowPresentation } from "./track-row";
 import type { TrackListView } from "./types";
 import { useTrackListKeyboard } from "./use-track-list-keyboard";
 
@@ -37,44 +40,72 @@ type TrackListInnerProps = {
 const TrackListInner = ({ emptyMessage }: TrackListInnerProps) => {
   const listRef = useRef<HTMLDivElement>(null);
   const dndContextId = useId();
-  const { registerPaneRef, setActivePane } = useDeck();
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const { registerPaneRef, setActivePane, currentTrack, isPlaying, addToUserQueue } =
+    useDeck();
   const { playlists } = useLibrary();
   const {
     tracks,
+    query,
     reorderable,
     selectable,
+    inSelectionMode,
+    allSelected,
+    setSelectAll,
     selectedCount,
+    isSelected,
     removeBarLabel,
     removePending,
     clearSelected,
     removeSelected,
     addSelectedToPlaylist,
     handleDragEnd,
-    focusedIndex,
-    getRowEl,
+    scrollContainerRef,
   } = useTrackList();
+
+  const activeTrack =
+    activeId != null ? tracks.find((t) => t.id === activeId) : undefined;
+  const activeIndex = activeTrack != null ? tracks.indexOf(activeTrack) : -1;
 
   useEffect(() => {
     registerPaneRef("tracklist", listRef);
   }, [registerPaneRef]);
 
-  useEffect(() => {
-    if (tracks.length === 0) return;
-    if (document.activeElement !== document.body) return;
-    const idx = focusedIndex >= 0 ? focusedIndex : 0;
-    getRowEl(tracks[idx].id)?.focus({ preventScroll: true });
-    // mount-only: initial focus the saved roving row
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const handleKeyDown = useTrackListKeyboard();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
   );
 
+  const onDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  };
+
+  const onDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
+    handleDragEnd(event);
+  };
+
+  const onDragCancel = () => {
+    setActiveId(null);
+  };
+
+  const addSelectedToQueue = useCallback(() => {
+    const selectedTracks = tracks.filter((t) => isSelected(t.id));
+    if (selectedTracks.length === 0) return;
+    addToUserQueue(selectedTracks);
+    clearSelected();
+  }, [tracks, isSelected, addToUserQueue, clearSelected]);
+
   const table = (
-    <Table variant="card" className="w-full">
+    <Table
+      variant="card"
+      className="w-full"
+      scrollContainerRef={scrollContainerRef}
+    >
       <TableHeader
         className={cn(
           "hidden sm:table-header-group",
@@ -84,7 +115,17 @@ const TrackListInner = ({ emptyMessage }: TrackListInnerProps) => {
       >
         <TableRow className="hover:bg-transparent">
           <TableHead className="hidden sm:table-cell w-12 min-w-12 max-w-12 text-center text-xs">
-            #
+            {inSelectionMode ? (
+              <div className="flex items-center justify-center">
+                <Checkbox
+                  checked={allSelected}
+                  aria-label="Select all tracks"
+                  onCheckedChange={setSelectAll}
+                />
+              </div>
+            ) : (
+              "#"
+            )}
           </TableHead>
           <TableHead className="text-xs">Title</TableHead>
           <TableHead className="hidden text-xs md:table-cell">Album</TableHead>
@@ -122,9 +163,30 @@ const TrackListInner = ({ emptyMessage }: TrackListInnerProps) => {
               sensors={sensors}
               collisionDetection={closestCenter}
               modifiers={[restrictToVerticalAxis]}
-              onDragEnd={handleDragEnd}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onDragCancel={onDragCancel}
             >
               {table}
+              <DragOverlay dropAnimation={null}>
+                {activeTrack && activeIndex >= 0 ? (
+                  <table className="w-full text-sm">
+                    <tbody>
+                      <TrackRowPresentation
+                        track={activeTrack}
+                        index={activeIndex}
+                        query={query}
+                        isCurrent={currentTrack?.id === activeTrack.id}
+                        isPlaying={
+                          currentTrack?.id === activeTrack.id && isPlaying
+                        }
+                        showMenu
+                        className="bg-card shadow-lg"
+                      />
+                    </tbody>
+                  </table>
+                ) : null}
+              </DragOverlay>
             </DndContext>
           ) : (
             table
@@ -138,6 +200,7 @@ const TrackListInner = ({ emptyMessage }: TrackListInnerProps) => {
           removeLabel={removeBarLabel}
           removeDisabled={removePending}
           onAddToPlaylist={addSelectedToPlaylist}
+          onAddToQueue={addSelectedToQueue}
           onRemove={removeSelected}
           onClear={clearSelected}
         />

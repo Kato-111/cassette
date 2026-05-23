@@ -12,6 +12,7 @@ import {
 import { updateTrackFieldAction } from "@/app/_actions/tracks";
 import { uploadTrackArtworkAction } from "@/app/_actions/uploads";
 import { FavoriteButton } from "@/app/_components/favorite-button";
+import { QueueList } from "@/app/_playback/queue-list";
 import { useDeck } from "@/contexts/deck-context";
 import { cn } from "@/lib/utils";
 
@@ -151,15 +152,17 @@ export const NowPlayingPanel = () => {
     : currentTrack.artworkUrl;
 
   return (
-    <aside className="m-2 ml-0 hidden w-72 flex-col overflow-auto rounded-xl border border-white/12 bg-background p-5 shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_4px_12px_rgb(0_0_0/0.6)] lg:flex">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">Now Playing</h2>
-        <FavoriteButton
-          trackId={currentTrack.id}
-          isFavorite={currentTrack.isFavorite}
-        />
-      </div>
-      <div className="group relative mx-auto mb-5 aspect-square w-full max-w-56 overflow-hidden rounded-lg bg-muted shadow-lg shadow-black/40">
+    <aside className="m-2 ml-0 hidden w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-white/12 bg-background p-5 shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_4px_12px_rgb(0_0_0/0.6)] max-md:hidden lg:flex">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="shrink-0">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-foreground">Now Playing</h2>
+            <FavoriteButton
+              trackId={currentTrack.id}
+              isFavorite={currentTrack.isFavorite}
+            />
+          </div>
+          <div className="group relative mx-auto mb-5 aspect-square w-full max-w-56 overflow-hidden rounded-lg bg-muted shadow-lg shadow-black/40">
         {artworkUrl ? (
           <Image
             src={artworkUrl}
@@ -202,31 +205,37 @@ export const NowPlayingPanel = () => {
             </div>
           </label>
         </form>
-      </div>
-      <div className="space-y-3">
-        <EditableInput
-          trackId={currentTrack.id}
-          field="title"
-          label="Title"
-          initialValue={currentTrack.title}
-        />
-        <EditableInput
-          trackId={currentTrack.id}
-          field="artist"
-          label="Artist"
-          initialValue={currentTrack.artist}
-        />
-        <EditableInput
-          trackId={currentTrack.id}
-          field="album"
-          label="Album"
-          initialValue={currentTrack.album ?? ""}
-        />
-        <EditableInput
-          trackId={currentTrack.id}
-          field="genre"
-          label="Genre"
-          initialValue={currentTrack.genre ?? ""}
+          </div>
+          <div className="space-y-3">
+            <EditableInput
+              trackId={currentTrack.id}
+              field="title"
+              label="Title"
+              initialValue={currentTrack.title}
+            />
+            <EditableInput
+              trackId={currentTrack.id}
+              field="artist"
+              label="Artist"
+              initialValue={currentTrack.artist}
+            />
+            <EditableInput
+              trackId={currentTrack.id}
+              field="album"
+              label="Album"
+              initialValue={currentTrack.album ?? ""}
+            />
+            <EditableInput
+              trackId={currentTrack.id}
+              field="genre"
+              label="Genre"
+              initialValue={currentTrack.genre ?? ""}
+            />
+          </div>
+        </div>
+        <QueueList
+          className="mt-4 min-h-0 flex-1 border-t border-white/10 pt-4"
+          listClassName="max-h-64"
         />
       </div>
     </aside>

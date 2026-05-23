@@ -14,6 +14,7 @@ import {
   useState,
   useTransition,
   type ReactNode,
+  type RefObject,
 } from "react";
 import {
   attachTrackAction,
@@ -42,12 +43,13 @@ type TrackListContextValue = {
   removePending: boolean;
   inSelectionMode: boolean;
   selectedCount: number;
+  allSelected: boolean;
   isSelected: (id: string) => boolean;
   toggleSelected: (id: string) => void;
   addToSelection: (id: string) => void;
+  setSelectAll: (checked: boolean) => void;
   clearSelected: () => void;
-  removeTrack: (trackId: string) => void;
-  removeAlbum: (album: string) => void;
+  removeTrack: (trackId: string, scope?: TrackListRemoveScope) => void;
   removeSelected: () => void;
   addSelectedToPlaylist: (playlistId: string) => void;
   handleDragEnd: (event: DragEndEvent) => void;
@@ -55,12 +57,16 @@ type TrackListContextValue = {
   setFocusedId: (id: string | null) => void;
   registerRowRef: (id: string, el: HTMLTableRowElement | null) => void;
   getRowEl: (id: string) => HTMLTableRowElement | null;
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
+  scrollToIndex: (index: number) => void;
+  registerScrollToIndex: (fn: ((index: number) => void) | null) => void;
 };
 
 const TrackListContext = createContext<TrackListContextValue | null>(null);
 
 const deriveViewConfig = (view: TrackListView, query?: string) => {
-  const reorderable = view.kind !== "favorites";
+  const reorderable =
+    view.kind !== "favorites" && view.kind !== "album";
   const removeScope: TrackListRemoveScope | null =
     view.kind === "favorites"
       ? null
@@ -101,7 +107,7 @@ export const TrackListProvider = ({
   children: ReactNode;
 }) => {
   const router = useRouter();
-  const { setQueue, currentTrack, playTrack, clearPlayback } = useDeck();
+  const { currentTrack, playFromContext, clearPlayback } = useDeck();
   const [tracks, setTracks] = useState(initialTracks);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [removePending, startRemoveTransition] = useTransition();
@@ -112,6 +118,7 @@ export const TrackListProvider = ({
   );
 
   const inSelectionMode = selected.size > 0;
+  const allSelected = tracks.length > 0 && selected.size === tracks.length;
   const dragEnabled = reorderable && !query && !inSelectionMode;
 
   const removeBarLabel =
@@ -127,10 +134,6 @@ export const TrackListProvider = ({
       return next.size === current.size ? current : next;
     });
   }, [initialTracks]);
-
-  useEffect(() => {
-    setQueue(tracks);
-  }, [tracks, setQueue]);
 
   const isSelected = useCallback(
     (id: string) => selected.has(id),
@@ -157,9 +160,17 @@ export const TrackListProvider = ({
 
   const clearSelected = useCallback(() => setSelected(new Set()), []);
 
+  const setSelectAll = useCallback(
+    (checked: boolean) => {
+      setSelected(checked ? new Set(tracks.map((t) => t.id)) : new Set());
+    },
+    [tracks],
+  );
+
   const removeFromList = useCallback(
-    (ids: string[]) => {
-      if (!removeScope || ids.length === 0) return;
+    (ids: string[], scope: TrackListRemoveScope) => {
+      if (ids.length === 0) return;
+      if (scope === "playlist" && !playlistId) return;
 
       const snapshot = { tracks, selected };
       const removedIds = new Set(ids);
@@ -170,7 +181,7 @@ export const TrackListProvider = ({
 
       startRemoveTransition(async () => {
         const result =
-          removeScope === "playlist"
+          scope === "playlist"
             ? await detachTracksAction(playlistId!, ids)
             : await deleteTracksAction(ids);
 
@@ -182,11 +193,9 @@ export const TrackListProvider = ({
 
         if (currentTrack && ids.includes(currentTrack.id)) {
           if (next.length > 0) {
-            const idx = Math.min(
-              snapshot.tracks.findIndex((t) => t.id === currentTrack.id),
-              next.length - 1,
-            );
-            playTrack(next[idx]!);
+            const idx = snapshot.tracks.findIndex((t) => t.id === currentTrack.id);
+            const fallbackIndex = idx >= 0 ? Math.min(idx, next.length - 1) : 0;
+            playFromContext(next, fallbackIndex);
           } else {
             clearPlayback();
           }
@@ -196,36 +205,30 @@ export const TrackListProvider = ({
       });
     },
     [
-      removeScope,
       playlistId,
       tracks,
       selected,
       currentTrack,
-      playTrack,
+      playFromContext,
       clearPlayback,
       router,
     ],
   );
 
   const removeTrack = useCallback(
-    (trackId: string) => removeFromList([trackId]),
-    [removeFromList],
-  );
-
-  const removeAlbum = useCallback(
-    (album: string) => {
-      const ids = tracks.filter((t) => t.album === album).map((t) => t.id);
-      removeFromList(ids);
+    (trackId: string, scope?: TrackListRemoveScope) => {
+      if (!removeScope) return;
+      removeFromList([trackId], scope ?? removeScope);
     },
-    [tracks, removeFromList],
+    [removeFromList, removeScope],
   );
 
   const selectedIds = useMemo(() => Array.from(selected), [selected]);
 
   const removeSelected = useCallback(() => {
-    if (selectedIds.length === 0) return;
-    removeFromList(selectedIds);
-  }, [selectedIds, removeFromList]);
+    if (selectedIds.length === 0 || !removeScope) return;
+    removeFromList(selectedIds, removeScope);
+  }, [selectedIds, removeFromList, removeScope]);
 
   const addSelectedToPlaylist = useCallback(
     async (targetPlaylistId: string) => {
@@ -243,6 +246,19 @@ export const TrackListProvider = ({
 
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollToIndexRef = useRef<(index: number) => void>(() => {});
+
+  const scrollToIndex = useCallback((index: number) => {
+    scrollToIndexRef.current(index);
+  }, []);
+
+  const registerScrollToIndex = useCallback(
+    (fn: ((index: number) => void) | null) => {
+      scrollToIndexRef.current = fn ?? (() => {});
+    },
+    [],
+  );
 
   const registerRowRef = useCallback(
     (id: string, el: HTMLTableRowElement | null) => {
@@ -305,12 +321,13 @@ export const TrackListProvider = ({
       removePending,
       inSelectionMode,
       selectedCount: selectedIds.length,
+      allSelected,
       isSelected,
       toggleSelected,
       addToSelection,
+      setSelectAll,
       clearSelected,
       removeTrack,
-      removeAlbum,
       removeSelected,
       addSelectedToPlaylist,
       handleDragEnd,
@@ -318,6 +335,9 @@ export const TrackListProvider = ({
       setFocusedId,
       registerRowRef,
       getRowEl,
+      scrollContainerRef,
+      scrollToIndex,
+      registerScrollToIndex,
     }),
     [
       view,
@@ -331,18 +351,21 @@ export const TrackListProvider = ({
       removePending,
       inSelectionMode,
       selectedIds.length,
+      allSelected,
       isSelected,
       toggleSelected,
       addToSelection,
+      setSelectAll,
       clearSelected,
       removeTrack,
-      removeAlbum,
       removeSelected,
       addSelectedToPlaylist,
       handleDragEnd,
       focusedIndex,
       registerRowRef,
       getRowEl,
+      scrollToIndex,
+      registerScrollToIndex,
     ],
   );
 

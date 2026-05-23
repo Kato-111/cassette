@@ -6,12 +6,15 @@ export type TableVariant = "default" | "card";
 export function Table({
   className,
   variant = "default",
+  scrollContainerRef,
   ...props
 }: React.ComponentProps<"table"> & {
   variant?: TableVariant;
+  scrollContainerRef?: React.Ref<HTMLDivElement>;
 }): React.ReactElement {
   return (
     <div
+      ref={scrollContainerRef}
       className="relative w-full overflow-x-auto scrollbar-none"
       data-slot="table-container"
       data-variant={variant}

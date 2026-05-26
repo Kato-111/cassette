@@ -13,17 +13,16 @@ import {
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import type { Track } from "@prisma/client";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Frame } from "@/components/ui/frame";
 import {
   Table,
-  TableBody,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useDeck } from "@/contexts/deck-context";
+import { useAddToUserQueue, useCurrentTrack, useIsPlaying } from "@/contexts/deck-context";
 import { useLibrary } from "@/contexts/library-context";
 import { TrackListProvider, useTrackList } from "@/contexts/track-list-context";
 import { cn } from "@/lib/utils";
@@ -31,18 +30,17 @@ import { SelectionCommandBar } from "./selection-command-bar";
 import { TrackListTableBody } from "./track-list-table";
 import { TrackRowPresentation } from "./track-row";
 import type { TrackListView } from "./types";
-import { useTrackListKeyboard } from "./use-track-list-keyboard";
 
 type TrackListInnerProps = {
   emptyMessage: string;
 };
 
 const TrackListInner = ({ emptyMessage }: TrackListInnerProps) => {
-  const listRef = useRef<HTMLDivElement>(null);
   const dndContextId = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const { registerPaneRef, setActivePane, currentTrack, isPlaying, addToUserQueue } =
-    useDeck();
+  const currentTrack = useCurrentTrack();
+  const isPlaying = useIsPlaying();
+  const addToUserQueue = useAddToUserQueue();
   const { playlists } = useLibrary();
   const {
     tracks,
@@ -59,6 +57,7 @@ const TrackListInner = ({ emptyMessage }: TrackListInnerProps) => {
     clearSelected,
     removeSelected,
     addSelectedToPlaylist,
+    addSelectedToFavorites,
     handleDragEnd,
     scrollContainerRef,
   } = useTrackList();
@@ -66,12 +65,6 @@ const TrackListInner = ({ emptyMessage }: TrackListInnerProps) => {
   const activeTrack =
     activeId != null ? tracks.find((t) => t.id === activeId) : undefined;
   const activeIndex = activeTrack != null ? tracks.indexOf(activeTrack) : -1;
-
-  useEffect(() => {
-    registerPaneRef("tracklist", listRef);
-  }, [registerPaneRef]);
-
-  const handleKeyDown = useTrackListKeyboard();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -135,19 +128,12 @@ const TrackListInner = ({ emptyMessage }: TrackListInnerProps) => {
           <TableHead className="w-10" />
         </TableRow>
       </TableHeader>
-      <TableBody className="h-full">
-        <TrackListTableBody />
-      </TableBody>
+      <TrackListTableBody />
     </Table>
   );
 
   return (
-    <div
-      ref={listRef}
-      className="flex min-h-0 flex-1 flex-col"
-      onClick={() => setActivePane("tracklist")}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="flex min-h-0 flex-1 flex-col">
       <Frame className="flex min-h-0 w-full flex-1 flex-col overflow-hidden **:data-[slot=table-container]:min-h-0 **:data-[slot=table-container]:flex-1 **:data-[slot=table-container]:overflow-y-auto max-sm:**:data-[slot=table-container]:overflow-x-hidden">
         <div className="relative flex min-h-0 flex-1 flex-col">
           {tracks.length === 0 ? (
@@ -170,7 +156,7 @@ const TrackListInner = ({ emptyMessage }: TrackListInnerProps) => {
               {table}
               <DragOverlay dropAnimation={null}>
                 {activeTrack && activeIndex >= 0 ? (
-                  <table className="w-full text-sm">
+                  <table className="w-full cursor-grabbing text-sm">
                     <tbody>
                       <TrackRowPresentation
                         track={activeTrack}
@@ -201,6 +187,7 @@ const TrackListInner = ({ emptyMessage }: TrackListInnerProps) => {
           removeDisabled={removePending}
           onAddToPlaylist={addSelectedToPlaylist}
           onAddToQueue={addSelectedToQueue}
+          onFavorite={addSelectedToFavorites}
           onRemove={removeSelected}
           onClear={clearSelected}
         />

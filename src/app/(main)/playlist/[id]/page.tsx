@@ -1,10 +1,9 @@
-import { IconArrowsShuffle } from "@tabler/icons-react";
 import { notFound } from "next/navigation";
 import { AddTracksToPlaylistDrawer } from "@/app/_components/add-tracks-to-playlist-drawer";
 import { SearchField } from "@/app/_components/search-field";
 import { LibraryPageHeader } from "@/app/_components/library-page-header";
 import { LibraryPageShell } from "@/app/_components/library-page-shell";
-import { Button } from "@/components/ui/button";
+import { ShuffleButton } from "@/app/_components/shuffle-button";
 import { CoverTile } from "./cover-tile";
 import { TitleField } from "./title-field";
 import { TrackList } from "@/app/_components/track-list";
@@ -53,9 +52,7 @@ const PlaylistPage = async ({
                 libraryTracks={libraryTracks}
                 existingTrackIds={existingTrackIds}
               />
-              <Button variant="ghost" size="icon-sm" aria-label="Shuffle">
-                <IconArrowsShuffle />
-              </Button>
+              <ShuffleButton />
             </>
           }
         />

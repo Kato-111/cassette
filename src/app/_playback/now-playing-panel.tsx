@@ -13,7 +13,7 @@ import { updateTrackFieldAction } from "@/app/_actions/tracks";
 import { uploadTrackArtworkAction } from "@/app/_actions/uploads";
 import { FavoriteButton } from "@/app/_components/favorite-button";
 import { QueueList } from "@/app/_playback/queue-list";
-import { useDeck } from "@/contexts/deck-context";
+import { useCurrentTrack } from "@/contexts/deck-context";
 import { cn } from "@/lib/utils";
 
 type EditableField = "title" | "artist" | "album" | "genre";
@@ -129,7 +129,7 @@ const EditableInput = ({
 };
 
 export const NowPlayingPanel = () => {
-  const { currentTrack } = useDeck();
+  const currentTrack = useCurrentTrack();
   const [artworkState, artworkAction, artworkPending] = useActionState(
     uploadTrackArtworkAction,
     { ok: false as const, error: "" },

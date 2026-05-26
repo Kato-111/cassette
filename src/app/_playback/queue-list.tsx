@@ -14,7 +14,11 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useId, useState } from "react";
 import { QueueListRow } from "@/app/_playback/queue-list-row";
-import { useDeck } from "@/contexts/deck-context";
+import {
+  useRemoveFromUserQueue,
+  useReorderUserQueue,
+  useUserQueue,
+} from "@/contexts/deck-context";
 import { cn } from "@/lib/utils";
 
 type QueueListProps = {
@@ -25,7 +29,9 @@ type QueueListProps = {
 export const QueueList = ({ className, listClassName }: QueueListProps) => {
   const dndContextId = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const { userQueue, removeFromUserQueue, reorderUserQueue } = useDeck();
+  const userQueue = useUserQueue();
+  const removeFromUserQueue = useRemoveFromUserQueue();
+  const reorderUserQueue = useReorderUserQueue();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),

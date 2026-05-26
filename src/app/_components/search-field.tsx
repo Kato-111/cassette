@@ -9,15 +9,20 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { cn } from "@/lib/utils";
 
 export const SearchField = ({
   value: initialValue,
   basePath = "/",
   preventAutoFocus = false,
+  size = "default",
+  className,
 }: {
   value?: string;
   basePath?: string;
   preventAutoFocus?: boolean;
+  size?: "sm" | "default";
+  className?: string;
 }) => {
   const router = useRouter();
   const [value, setValue] = useState(initialValue ?? "");
@@ -37,17 +42,21 @@ export const SearchField = ({
   }, [router, value, basePath]);
 
   return (
-    <InputGroup>
+    <InputGroup className={className}>
       <InputGroupAddon align="inline-start">
         <IconSearch aria-hidden="true" />
       </InputGroupAddon>
       <InputGroupInput
         ref={inputRef}
         type="search"
+        size={size}
         placeholder="Search"
         value={value}
         onChange={(e) => setValue(e.currentTarget.value)}
-        className="[&::-webkit-search-cancel-button]:appearance-none"
+        className={cn(
+          "[&::-webkit-search-cancel-button]:appearance-none",
+          size === "sm" && "text-xs",
+        )}
         aria-label="Search tracks"
         tabIndex={preventAutoFocus ? -1 : undefined}
       />
@@ -62,11 +71,11 @@ export const SearchField = ({
           >
             <IconX />
           </Button>
-        ) : (
+        ) : size === "default" ? (
           <kbd className="hidden h-5 w-5 items-center justify-center rounded border border-border bg-muted font-mono text-xs text-muted-foreground md:flex">
             /
           </kbd>
-        )}
+        ) : null}
       </InputGroupAddon>
     </InputGroup>
   );

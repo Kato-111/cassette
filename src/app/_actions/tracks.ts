@@ -100,6 +100,27 @@ export const updateTrackFieldAction = async (
   }
 };
 
+export const bulkSetFavoriteAction = async (
+  trackIds: string[],
+  isFavorite: boolean,
+): Promise<ActionResult> => {
+  if (trackIds.length === 0) return { ok: true };
+
+  try {
+    await prisma.track.updateMany({
+      where: { id: { in: trackIds } },
+      data: { isFavorite },
+    });
+    revalidateTag(CACHE_TAGS.tracks, "max");
+    revalidateTag(CACHE_TAGS.favorites, "max");
+    revalidatePath("/", "layout");
+    revalidatePath("/favorites");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+};
+
 export const deleteTrackAction = async (
   trackId: string,
 ): Promise<ActionResult> => deleteTracksAction([trackId]);

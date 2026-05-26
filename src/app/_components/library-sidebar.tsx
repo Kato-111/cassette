@@ -55,7 +55,7 @@ import {
   createPlaylistAction,
   removePlaylistAction,
 } from "@/app/_actions/playlists";
-import { useDeck } from "@/contexts/deck-context";
+import { useDeckPane } from "@/contexts/deck-context";
 import { useImporter } from "@/contexts/importer-context";
 import { useLibrary } from "@/contexts/library-context";
 import { SearchField } from "./search-field";
@@ -154,6 +154,7 @@ const MobileSearchField = () => {
       value={searchParams.get("q") ?? ""}
       basePath={pathname}
       preventAutoFocus
+      size="sm"
     />
   );
 };
@@ -360,13 +361,18 @@ export const LibrarySidebar = () => {
   const { playlists, albums } = useLibrary();
   const pathname = usePathname();
   const navRef = useRef<HTMLDivElement>(null);
-  const { registerPaneRef, handlePaneKey, setActivePane } = useDeck();
-  const { isMobile } = useSidebar();
+  const { registerPaneRef, handlePaneKey, setActivePane } = useDeckPane();
+  const { isMobile, setOpenMobile } = useSidebar();
   const reduceMotion = useReducedMotion();
   const mode: "library" | "settings" = pathname.startsWith("/settings")
     ? "settings"
     : "library";
   const direction = useNavSlideDirection(mode);
+  const noAnimation = reduceMotion || isMobile;
+
+  const closeIfLink = (e: React.MouseEvent) => {
+    if (isMobile && (e.target as Element).closest("a")) setOpenMobile(false);
+  };
 
   useEffect(() => {
     registerPaneRef("sidebar", navRef);
@@ -384,10 +390,10 @@ export const LibrarySidebar = () => {
           <h1 className="text-2xl font-bold font-ephesis">Cassette</h1>
         </div>
         {isMobile ? (
-          <div className="mt-2">
+          <div className="mt-1.5">
             <Suspense
               fallback={
-                <SearchField basePath={pathname} preventAutoFocus />
+                <SearchField basePath={pathname} preventAutoFocus size="sm" />
               }
             >
               <MobileSearchField />
@@ -398,7 +404,7 @@ export const LibrarySidebar = () => {
       <SidebarContent
         ref={navRef}
         scrollable={false}
-        onClick={() => setActivePane("sidebar")}
+        onClick={(e) => { setActivePane("sidebar"); closeIfLink(e); }}
         onKeyDown={(e) => handlePaneKey(e, "sidebar")}
         className="mt-4 min-h-0 flex-1 overflow-hidden"
       >
@@ -411,18 +417,18 @@ export const LibrarySidebar = () => {
               variants={{
                 enter: (dir: 1 | -1) => ({
                   opacity: 0,
-                  x: reduceMotion ? 0 : `${dir * 100}%`,
-                  transition: navSpring(reduceMotion),
+                  x: noAnimation ? 0 : `${dir * 100}%`,
+                  transition: navSpring(noAnimation),
                 }),
                 center: {
                   opacity: 1,
                   x: 0,
-                  transition: navSpring(reduceMotion),
+                  transition: navSpring(noAnimation),
                 },
                 exit: (dir: 1 | -1) => ({
                   opacity: 0,
-                  x: reduceMotion ? 0 : `${-dir * 100}%`,
-                  transition: navSpring(reduceMotion, true),
+                  x: noAnimation ? 0 : `${-dir * 100}%`,
+                  transition: navSpring(noAnimation, true),
                 }),
               }}
               initial="enter"
@@ -439,7 +445,7 @@ export const LibrarySidebar = () => {
           </AnimatePresence>
         </div>
       </SidebarContent>
-      <SidebarFooter className="shrink-0">
+      <SidebarFooter className="shrink-0" onClick={closeIfLink}>
         <SidebarMenu>
           {mode === "settings" ? (
             <SidebarMenuItem>

@@ -10,15 +10,27 @@ import {
 } from "@tabler/icons-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { ShuffleButton } from "@/app/_components/shuffle-button";
 import { Button } from "@/components/ui/button";
 import { SliderPrimitive } from "@/components/ui/slider";
 import { FavoriteButton } from "@/app/_components/favorite-button";
-import { useDeck } from "@/contexts/deck-context";
+import {
+  audioRef,
+  useCurrentTime,
+  useCurrentTrack,
+  useDuration,
+  useIsPlaying,
+  usePlayNextTrack,
+  usePlayPreviousTrack,
+  useSetAudioElement,
+  useSetCurrentTime,
+  useTogglePlayPause,
+} from "@/contexts/deck-context";
 import { formatDuration } from "@/lib/format";
 import { NowPlayingDrawer } from "./now-playing-drawer";
 
 const TrackBadge = () => {
-  const { currentTrack } = useDeck();
+  const currentTrack = useCurrentTrack();
   if (!currentTrack) return <div className="w-1/3" />;
 
   return (
@@ -48,16 +60,18 @@ const TrackBadge = () => {
 };
 
 export const TransportButtons = () => {
-  const {
-    isPlaying,
-    togglePlayPause,
-    playPreviousTrack,
-    playNextTrack,
-    currentTrack,
-  } = useDeck();
+  const isPlaying = useIsPlaying();
+  const currentTrack = useCurrentTrack();
+  const togglePlayPause = useTogglePlayPause();
+  const playPreviousTrack = usePlayPreviousTrack();
+  const playNextTrack = usePlayNextTrack();
 
   return (
     <div className="flex items-center gap-3">
+      <ShuffleButton
+        size="icon"
+        className="hover:bg-foreground/10 rounded-full"
+      />
       <Button
         variant="ghost"
         size="icon"
@@ -96,8 +110,10 @@ const EMPTY_TIME = "--:--";
 const MOBILE_TRANSPORT_HEIGHT = "calc(5rem + env(safe-area-inset-bottom))";
 
 export const ScrubBar = () => {
-  const { currentTrack, currentTime, duration, audioRef, setCurrentTime } =
-    useDeck();
+  const currentTrack = useCurrentTrack();
+  const currentTime = useCurrentTime();
+  const duration = useDuration();
+  const setCurrentTime = useSetCurrentTime();
   const [scrubValue, setScrubValue] = useState<number | null>(null);
   const hasTrack = Boolean(currentTrack);
   const seekable = hasTrack && duration > 0;
@@ -150,7 +166,7 @@ export const ScrubBar = () => {
 };
 
 const VolumeKnob = () => {
-  const { audioRef, currentTrack } = useDeck();
+  const currentTrack = useCurrentTrack();
   const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
 
@@ -160,7 +176,6 @@ const VolumeKnob = () => {
     if (Number.isFinite(v)) audioRef.current.volume = v;
   }, [audioRef, muted, volume]);
 
-  // console.log(muted, volume);
   return (
     <div className="flex w-32 items-center gap-2">
       <Button
@@ -206,7 +221,9 @@ const VolumeKnob = () => {
 };
 
 const MobileProgressIndicator = () => {
-  const { currentTrack, currentTime, duration } = useDeck();
+  const currentTrack = useCurrentTrack();
+  const currentTime = useCurrentTime();
+  const duration = useDuration();
   const pct =
     currentTrack && duration > 0
       ? Math.min(100, Math.max(0, (currentTime / duration) * 100))
@@ -223,7 +240,7 @@ const MobileProgressIndicator = () => {
 };
 
 const DesktopFavoriteButton = () => {
-  const { currentTrack } = useDeck();
+  const currentTrack = useCurrentTrack();
   return (
     <FavoriteButton
       trackId={currentTrack?.id ?? ""}
@@ -234,7 +251,9 @@ const DesktopFavoriteButton = () => {
 };
 
 const MobileTrackRow = () => {
-  const { currentTrack, isPlaying, togglePlayPause } = useDeck();
+  const currentTrack = useCurrentTrack();
+  const isPlaying = useIsPlaying();
+  const togglePlayPause = useTogglePlayPause();
 
   return (
     <>
@@ -279,17 +298,14 @@ const MobileTrackRow = () => {
 };
 
 export const TransportBar = () => {
-  const {
-    currentTrack,
-    currentTime,
-    duration,
-    audioRef,
-    setAudioElement,
-    setCurrentTime,
-    playPreviousTrack,
-    playNextTrack,
-    togglePlayPause,
-  } = useDeck();
+  const currentTrack = useCurrentTrack();
+  const currentTime = useCurrentTime();
+  const duration = useDuration();
+  const setAudioElement = useSetAudioElement();
+  const setCurrentTime = useSetCurrentTime();
+  const playPreviousTrack = usePlayPreviousTrack();
+  const playNextTrack = usePlayNextTrack();
+  const togglePlayPause = useTogglePlayPause();
 
   useEffect(() => {
     if (!("mediaSession" in navigator) || !currentTrack) return;

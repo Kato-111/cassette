@@ -2,7 +2,17 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { Track } from "@prisma/client";
 import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DeckProvider, useDeck } from "@/contexts/deck-context";
+import {
+  DeckProvider,
+  useAddToUserQueue,
+  useCurrentTrack,
+  usePlayFromContext,
+  usePlayNextTrack,
+  usePlayPreviousTrack,
+  useSetAudioElement,
+  useTogglePlayPause,
+  useUserQueue,
+} from "@/contexts/deck-context";
 
 const makeTrack = (overrides: Partial<Track> = {}): Track => ({
   id: "t1",
@@ -57,48 +67,55 @@ const DeckHarness = ({
   tracks: Track[];
   audioRef: React.RefObject<ReturnType<typeof createMockAudio>>;
 }) => {
-  const deck = useDeck();
+  const currentTrack = useCurrentTrack();
+  const userQueue = useUserQueue();
+  const playFromContext = usePlayFromContext();
+  const playNextTrack = usePlayNextTrack();
+  const playPreviousTrack = usePlayPreviousTrack();
+  const togglePlayPause = useTogglePlayPause();
+  const addToUserQueue = useAddToUserQueue();
+  const setAudioElement = useSetAudioElement();
 
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = createMockAudio();
     }
-    deck.setAudioElement(audioRef.current);
-  }, [deck, audioRef]);
+    setAudioElement(audioRef.current);
+  }, [setAudioElement, audioRef]);
 
   return (
     <div>
       <button
         type="button"
-        onClick={() => deck.playFromContext(tracks, 0)}
+        onClick={() => playFromContext(tracks, 0)}
       >
         play-first
       </button>
-      <button type="button" onClick={() => deck.playNextTrack()}>
+      <button type="button" onClick={() => playNextTrack()}>
         next
       </button>
-      <button type="button" onClick={() => deck.playPreviousTrack()}>
+      <button type="button" onClick={() => playPreviousTrack()}>
         prev
       </button>
-      <button type="button" onClick={() => deck.togglePlayPause()}>
+      <button type="button" onClick={() => togglePlayPause()}>
         toggle
       </button>
       <button
         type="button"
-        onClick={() => deck.addToUserQueue([tracks[1]!])}
+        onClick={() => addToUserQueue([tracks[1]!])}
       >
         queue-second
       </button>
       <button
         type="button"
         onClick={() =>
-          deck.playFromContext(tracks, 1)
+          playFromContext(tracks, 1)
         }
       >
         play-second
       </button>
-      <span data-testid="current">{deck.currentTrack?.title ?? "none"}</span>
-      <span data-testid="queue-count">{deck.userQueue.length}</span>
+      <span data-testid="current">{currentTrack?.title ?? "none"}</span>
+      <span data-testid="queue-count">{userQueue.length}</span>
     </div>
   );
 };

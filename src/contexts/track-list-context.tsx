@@ -22,6 +22,7 @@ import {
   reorderPlaylistTracksAction,
 } from "@/app/_actions/playlists";
 import {
+  bulkSetFavoriteAction,
   deleteTracksAction,
   reorderLibraryTracksAction,
 } from "@/app/_actions/tracks";
@@ -29,7 +30,13 @@ import type {
   TrackListRemoveScope,
   TrackListView,
 } from "@/app/_components/track-list/types";
-import { useDeck } from "@/contexts/deck-context";
+import {
+  useClearPlayback,
+  useCurrentTrack,
+  usePatchTrack,
+  usePlayFromContext,
+} from "@/contexts/deck-context";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type TrackListContextValue = {
   view: TrackListView;
@@ -52,19 +59,14 @@ type TrackListContextValue = {
   removeTrack: (trackId: string, scope?: TrackListRemoveScope) => void;
   removeSelected: () => void;
   addSelectedToPlaylist: (playlistId: string) => void;
+  addSelectedToFavorites: () => void;
   handleDragEnd: (event: DragEndEvent) => void;
-  focusedIndex: number;
-  setFocusedId: (id: string | null) => void;
-  registerRowRef: (id: string, el: HTMLTableRowElement | null) => void;
-  getRowEl: (id: string) => HTMLTableRowElement | null;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
-  scrollToIndex: (index: number) => void;
-  registerScrollToIndex: (fn: ((index: number) => void) | null) => void;
 };
 
 const TrackListContext = createContext<TrackListContextValue | null>(null);
 
-const deriveViewConfig = (view: TrackListView, query?: string) => {
+const deriveViewConfig = (view: TrackListView) => {
   const reorderable =
     view.kind !== "favorites" && view.kind !== "album";
   const removeScope: TrackListRemoveScope | null =
@@ -81,7 +83,6 @@ const deriveViewConfig = (view: TrackListView, query?: string) => {
     removeScope,
     selectable,
     playlistId,
-    dragEnabled: reorderable && !query,
   };
 };
 
@@ -107,19 +108,24 @@ export const TrackListProvider = ({
   children: ReactNode;
 }) => {
   const router = useRouter();
-  const { currentTrack, playFromContext, clearPlayback } = useDeck();
+  const currentTrack = useCurrentTrack();
+  const playFromContext = usePlayFromContext();
+  const clearPlayback = useClearPlayback();
+  const patchTrack = usePatchTrack();
+  const isMobile = useIsMobile();
   const [tracks, setTracks] = useState(initialTracks);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [removePending, startRemoveTransition] = useTransition();
 
   const { reorderable, removeScope, selectable, playlistId } = useMemo(
-    () => deriveViewConfig(view, query),
-    [view, query],
+    () => deriveViewConfig(view),
+    [view],
   );
 
   const inSelectionMode = selected.size > 0;
   const allSelected = tracks.length > 0 && selected.size === tracks.length;
-  const dragEnabled = reorderable && !query && !inSelectionMode;
+  const dragEnabled =
+    reorderable && !query && !inSelectionMode && !isMobile;
 
   const removeBarLabel =
     removeScope === "playlist" ? "Remove from playlist" : "Delete";
@@ -244,47 +250,32 @@ export const TrackListProvider = ({
     [selectedIds, clearSelected, router],
   );
 
-  const [focusedId, setFocusedId] = useState<string | null>(null);
-  const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
+  const addSelectedToFavorites = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    const snapshot = tracks;
+    const idsSet = new Set(selectedIds);
+
+    // Optimistic update
+    setTracks((current) =>
+      current.map((t) => (idsSet.has(t.id) ? { ...t, isFavorite: true } : t)),
+    );
+    selectedIds.forEach((id) => patchTrack(id, { isFavorite: true }));
+
+    void bulkSetFavoriteAction(selectedIds, true).then((result) => {
+      if (!result.ok) {
+        setTracks(snapshot);
+        selectedIds.forEach((id) => {
+          const original = snapshot.find((t) => t.id === id);
+          if (original) patchTrack(id, { isFavorite: original.isFavorite });
+        });
+        return;
+      }
+      clearSelected();
+      router.refresh();
+    });
+  }, [selectedIds, tracks, patchTrack, clearSelected, router]);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const scrollToIndexRef = useRef<(index: number) => void>(() => {});
-
-  const scrollToIndex = useCallback((index: number) => {
-    scrollToIndexRef.current(index);
-  }, []);
-
-  const registerScrollToIndex = useCallback(
-    (fn: ((index: number) => void) | null) => {
-      scrollToIndexRef.current = fn ?? (() => {});
-    },
-    [],
-  );
-
-  const registerRowRef = useCallback(
-    (id: string, el: HTMLTableRowElement | null) => {
-      if (el) rowRefs.current.set(id, el);
-      else rowRefs.current.delete(id);
-    },
-    [],
-  );
-
-  const getRowEl = useCallback(
-    (id: string) => rowRefs.current.get(id) ?? null,
-    [],
-  );
-
-  const focusedIndex = useMemo(() => {
-    if (tracks.length === 0) return -1;
-    if (focusedId) {
-      const idx = tracks.findIndex((t) => t.id === focusedId);
-      if (idx >= 0) return idx;
-    }
-    if (currentTrack) {
-      const idx = tracks.findIndex((t) => t.id === currentTrack.id);
-      if (idx >= 0) return idx;
-    }
-    return 0;
-  }, [focusedId, tracks, currentTrack]);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -330,14 +321,9 @@ export const TrackListProvider = ({
       removeTrack,
       removeSelected,
       addSelectedToPlaylist,
+      addSelectedToFavorites,
       handleDragEnd,
-      focusedIndex,
-      setFocusedId,
-      registerRowRef,
-      getRowEl,
       scrollContainerRef,
-      scrollToIndex,
-      registerScrollToIndex,
     }),
     [
       view,
@@ -360,12 +346,8 @@ export const TrackListProvider = ({
       removeTrack,
       removeSelected,
       addSelectedToPlaylist,
+      addSelectedToFavorites,
       handleDragEnd,
-      focusedIndex,
-      registerRowRef,
-      getRowEl,
-      scrollToIndex,
-      registerScrollToIndex,
     ],
   );
 

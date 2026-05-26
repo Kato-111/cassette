@@ -1,6 +1,6 @@
 "use client";
 
-import { IconList, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
+import { IconHeart, IconList, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -24,6 +24,7 @@ type SelectionCommandBarProps = {
   removeDisabled: boolean;
   onAddToPlaylist: (playlistId: string) => void;
   onAddToQueue: () => void;
+  onFavorite: () => void;
   onRemove: () => void;
   onClear: () => void;
 };
@@ -42,6 +43,7 @@ export function SelectionCommandBar({
   removeDisabled,
   onAddToPlaylist,
   onAddToQueue,
+  onFavorite,
   onRemove,
   onClear,
 }: SelectionCommandBarProps) {
@@ -142,6 +144,14 @@ export function SelectionCommandBar({
               className={COMMAND_BAR_BUTTON}
             >
               <IconList /> Add to queue
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onFavorite}
+              className={cn(COMMAND_BAR_BUTTON, "text-rose")}
+            >
+              <IconHeart /> Favorite
             </Button>
             <Button
               variant="ghost"

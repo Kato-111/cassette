@@ -14,11 +14,11 @@ import {
 } from "@/components/ui/drawer";
 import { FavoriteButton } from "@/app/_components/favorite-button";
 import { QueueList } from "@/app/_playback/queue-list";
-import { useDeck } from "@/contexts/deck-context";
+import { useCurrentTrack } from "@/contexts/deck-context";
 import { ScrubBar, TransportButtons } from "./transport-bar";
 
 const NowPlayingDrawerContent = () => {
-  const { currentTrack } = useDeck();
+  const currentTrack = useCurrentTrack();
   if (!currentTrack) return null;
 
   return (
@@ -63,7 +63,7 @@ const NowPlayingDrawerContent = () => {
 };
 
 export const NowPlayingDrawer = ({ children }: { children: ReactNode }) => {
-  const { currentTrack } = useDeck();
+  const currentTrack = useCurrentTrack();
 
   return (
     <Drawer>

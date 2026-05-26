@@ -1,43 +1,39 @@
 import { ImageResponse } from "next/og";
-
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
 const AppleIcon = () =>
   new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#0A0A0A",
-        }}
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#0A0A0A",
+        color: "#fff",
+      }}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        className="lucide lucide-cassette-tape-icon lucide-cassette-tape"
       >
-        <svg
-          width="120"
-          height="120"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect
-            x="2"
-            y="6"
-            width="20"
-            height="12"
-            rx="2"
-            stroke="#F5F5F5"
-            strokeWidth="1.5"
-          />
-          <circle cx="8" cy="12" r="2.5" stroke="#F5F5F5" strokeWidth="1.5" />
-          <circle cx="16" cy="12" r="2.5" stroke="#F5F5F5" strokeWidth="1.5" />
-          <rect x="10.5" y="11" width="3" height="2" fill="#F5F5F5" />
-        </svg>
-      </div>
-    ),
+        <rect width="20" height="16" x="2" y="4" rx="2" />
+        <circle cx="8" cy="10" r="2" />
+        <path d="M8 12h8" />
+        <circle cx="16" cy="10" r="2" />
+        <path d="m6 20 .7-2.9A1.4 1.4 0 0 1 8.1 16h7.8a1.4 1.4 0 0 1 1.4 1l.7 3" />
+      </svg>
+    </div>,
     { ...size },
   );
 

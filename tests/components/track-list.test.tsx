@@ -27,17 +27,18 @@ let deckState = {
 };
 
 vi.mock("@/contexts/deck-context", () => ({
-  useDeck: () => ({
-    currentTrack: deckState.currentTrack,
-    isPlaying: deckState.isPlaying,
-    playFromContext: playFromContextMock,
-    togglePlayPause: togglePlayPauseMock,
-    addToUserQueue: addToUserQueueMock,
-    clearPlayback: clearPlaybackMock,
-    setActivePane: vi.fn(),
-    registerPaneRef: vi.fn(),
-    handlePaneKey: vi.fn(),
-  }),
+  useCurrentTrack: () => deckState.currentTrack,
+  useIsPlaying: () => deckState.isPlaying,
+  usePlayFromContext: () => playFromContextMock,
+  useTogglePlayPause: () => togglePlayPauseMock,
+  useAddToUserQueue: () => addToUserQueueMock,
+  useClearPlayback: () => clearPlaybackMock,
+  useSetActivePane: () => vi.fn(),
+  usePatchTrack: () => vi.fn(),
+}));
+
+vi.mock("@/hooks/use-mobile", () => ({
+  useIsMobile: () => false,
 }));
 
 vi.mock("@/contexts/library-context", () => ({

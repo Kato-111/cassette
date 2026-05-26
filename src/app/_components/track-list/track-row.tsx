@@ -12,17 +12,16 @@ import {
 } from "@tabler/icons-react";
 import Image from "next/image";
 import type { Track } from "@prisma/client";
-import {
-  memo,
-  useCallback,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
+import { memo, useState, type CSSProperties, type ReactNode } from "react";
 import { attachTrackAction } from "@/app/_actions/playlists";
 import { FavoriteButton } from "@/app/_components/favorite-button";
 import { removeTrackLabel } from "@/app/_components/track-list/labels";
-import { useDeck } from "@/contexts/deck-context";
+import {
+  useAddToUserQueue,
+  usePlayFromContext,
+  useSetActivePane,
+  useTogglePlayPause,
+} from "@/contexts/deck-context";
 import { useLibrary } from "@/contexts/library-context";
 import { useTrackList } from "@/contexts/track-list-context";
 import { Button } from "@/components/ui/button";
@@ -255,7 +254,7 @@ const TrackRowMenu = ({
   const [open, setOpen] = useState(false);
   const { removeScope, removePending, removeTrack } = useTrackList();
   const { playlists } = useLibrary();
-  const { addToUserQueue } = useDeck();
+  const addToUserQueue = useAddToUserQueue();
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -362,20 +361,20 @@ const TrackRowMenu = ({
 export type TrackRowProps = {
   track: Track;
   index: number;
+  tabIndex?: number;
   query?: string;
   isCurrent: boolean;
   isPlaying: boolean;
-  isFocused: boolean;
   isSelected: boolean;
 };
 
 const TrackRowInner = ({
   track,
   index,
+  tabIndex = -1,
   query,
   isCurrent,
   isPlaying,
-  isFocused,
   isSelected: selected,
 }: TrackRowProps) => {
   const {
@@ -384,11 +383,11 @@ const TrackRowInner = ({
     selectable,
     inSelectionMode,
     toggleSelected,
-    setFocusedId,
-    registerRowRef,
     tracks,
   } = useTrackList();
-  const { playFromContext, togglePlayPause, setActivePane } = useDeck();
+  const playFromContext = usePlayFromContext();
+  const togglePlayPause = useTogglePlayPause();
+  const setActivePane = useSetActivePane();
 
   const {
     attributes,
@@ -403,7 +402,6 @@ const TrackRowInner = ({
     ? {
         transform: CSS.Transform.toString(transform),
         transition,
-        willChange: isDragging ? "transform" : undefined,
       }
     : {};
 
@@ -423,28 +421,27 @@ const TrackRowInner = ({
   const dragAttrs = dragEnabled ? attributes : undefined;
   const dragListeners = dragEnabled ? listeners : undefined;
 
-  const setRefs = useCallback(
-    (el: HTMLTableRowElement | null) => {
-      setNodeRef(el);
-      registerRowRef(track.id, el);
-    },
-    [setNodeRef, registerRowRef, track.id],
-  );
-
   return (
     <TableRow
-      ref={setRefs}
+      ref={setNodeRef}
       style={style}
       {...dragAttrs}
       {...(dragListeners ?? {})}
-      tabIndex={isFocused ? 0 : -1}
+      tabIndex={tabIndex}
+      data-row-index={index}
       data-state={isCurrent || selected ? "selected" : undefined}
       onClick={handleRowClick}
-      onFocus={() => setFocusedId(track.id)}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleRowClick();
+        }
+      }}
       className={cn(
-        "group/tr select-none outline-none",
-        dragEnabled ? " active:cursor-grabbing" : "cursor-pointer",
-        isDragging && "relative z-10 opacity-40",
+        "group/tr select-none outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rose/60",
+        !dragEnabled && "cursor-pointer",
+        isDragging && "opacity-0",
       )}
     >
       <TrackRowCells

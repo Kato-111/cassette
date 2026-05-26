@@ -1,10 +1,9 @@
-import { IconArrowsShuffle } from "@tabler/icons-react";
 import { notFound } from "next/navigation";
 import { SearchField } from "@/app/_components/search-field";
 import { LibraryPageHeader } from "@/app/_components/library-page-header";
 import { LibraryPageShell } from "@/app/_components/library-page-shell";
 import { PlaylistAvatar } from "@/app/_components/playlist-avatar";
-import { Button } from "@/components/ui/button";
+import { ShuffleButton } from "@/app/_components/shuffle-button";
 import { TrackList } from "@/app/_components/track-list";
 import { filterTracksByQuery, getAlbumWithTracks } from "@/lib/queries";
 import { formatDuration } from "@/lib/format";
@@ -36,11 +35,7 @@ const AlbumPage = async ({
           search={
             <SearchField value={query} basePath={`/album/${album.id}`} />
           }
-          actions={
-            <Button variant="ghost" size="icon-sm" aria-label="Shuffle">
-              <IconArrowsShuffle />
-            </Button>
-          }
+          actions={<ShuffleButton />}
         />
       }
       banner={

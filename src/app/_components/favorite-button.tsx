@@ -4,7 +4,7 @@ import { IconHeart, IconHeartFilled } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toggleFavoriteAction } from "@/app/_actions/tracks";
-import { useDeck } from "@/contexts/deck-context";
+import { usePatchTrack } from "@/contexts/deck-context";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/menu";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,7 @@ export const useFavoriteToggle = (
   initialFavorite: boolean,
 ) => {
   const router = useRouter();
-  const { patchTrack } = useDeck();
+  const patchTrack = usePatchTrack();
   const [isFavorite, setIsFavorite] = useState(initialFavorite);
   const [pending, startTransition] = useTransition();
 

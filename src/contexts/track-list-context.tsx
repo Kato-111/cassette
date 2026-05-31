@@ -30,12 +30,13 @@ import type {
   TrackListRemoveScope,
   TrackListView,
 } from "@/app/_components/track-list/types";
+import { useStore } from "jotai";
 import {
-  useClearPlayback,
-  useCurrentTrack,
-  usePatchTrack,
-  usePlayFromContext,
-} from "@/contexts/deck-context";
+  clearPlaybackAtom,
+  currentTrackAtom,
+  patchTrackAtom,
+  playFromContextAtom,
+} from "@/contexts/deck-atoms";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type TrackListContextValue = {
@@ -108,10 +109,7 @@ export const TrackListProvider = ({
   children: ReactNode;
 }) => {
   const router = useRouter();
-  const currentTrack = useCurrentTrack();
-  const playFromContext = usePlayFromContext();
-  const clearPlayback = useClearPlayback();
-  const patchTrack = usePatchTrack();
+  const store = useStore();
   const isMobile = useIsMobile();
   const [tracks, setTracks] = useState(initialTracks);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -197,28 +195,21 @@ export const TrackListProvider = ({
           return;
         }
 
+        const currentTrack = store.get(currentTrackAtom);
         if (currentTrack && ids.includes(currentTrack.id)) {
           if (next.length > 0) {
             const idx = snapshot.tracks.findIndex((t) => t.id === currentTrack.id);
             const fallbackIndex = idx >= 0 ? Math.min(idx, next.length - 1) : 0;
-            playFromContext(next, fallbackIndex);
+            store.set(playFromContextAtom, next, fallbackIndex);
           } else {
-            clearPlayback();
+            store.set(clearPlaybackAtom);
           }
         }
 
         router.refresh();
       });
     },
-    [
-      playlistId,
-      tracks,
-      selected,
-      currentTrack,
-      playFromContext,
-      clearPlayback,
-      router,
-    ],
+    [playlistId, tracks, selected, store, router],
   );
 
   const removeTrack = useCallback(
@@ -259,21 +250,21 @@ export const TrackListProvider = ({
     setTracks((current) =>
       current.map((t) => (idsSet.has(t.id) ? { ...t, isFavorite: true } : t)),
     );
-    selectedIds.forEach((id) => patchTrack(id, { isFavorite: true }));
+    selectedIds.forEach((id) => store.set(patchTrackAtom, id, { isFavorite: true }));
 
     void bulkSetFavoriteAction(selectedIds, true).then((result) => {
       if (!result.ok) {
         setTracks(snapshot);
         selectedIds.forEach((id) => {
           const original = snapshot.find((t) => t.id === id);
-          if (original) patchTrack(id, { isFavorite: original.isFavorite });
+          if (original) store.set(patchTrackAtom, id, { isFavorite: original.isFavorite });
         });
         return;
       }
       clearSelected();
       router.refresh();
     });
-  }, [selectedIds, tracks, patchTrack, clearSelected, router]);
+  }, [selectedIds, tracks, store, clearSelected, router]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 

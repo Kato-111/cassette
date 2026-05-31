@@ -50,7 +50,7 @@ export const TrackListSkeleton = () => (
         </TableHeader>
         <TableBody className="h-full">
           {SKELETON_ROW_KEYS.map((key) => (
-            <TableRow key={key} className="hover:bg-transparent">
+            <TableRow key={key}>
               <TableCell className="w-12 min-w-12 max-w-12 max-sm:w-0 max-sm:min-w-0 max-sm:max-w-0 max-sm:p-0 max-sm:overflow-hidden">
                 <Skeleton className="mx-auto size-7 rounded-sm max-sm:hidden" />
               </TableCell>

@@ -27,7 +27,7 @@ export const setMinAlbumTracksAction = async (
   try {
     await setMinAlbumTracks(n);
     revalidatePath("/", "layout");
-    revalidatePath("/settings");
+    revalidatePath("/settings/albums");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
@@ -43,7 +43,7 @@ export const toggleAlbumVisibilityAction = async (
   try {
     await setAlbumHidden(albumName, hidden);
     revalidatePath("/", "layout");
-    revalidatePath("/settings");
+    revalidatePath("/settings/albums");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: (err as Error).message };

@@ -10,7 +10,6 @@ import {
 } from "@tabler/icons-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { ShuffleButton } from "@/app/_components/shuffle-button";
 import { Button } from "@/components/ui/button";
 import { SliderPrimitive } from "@/components/ui/slider";
 import { FavoriteButton } from "@/app/_components/favorite-button";
@@ -68,10 +67,7 @@ export const TransportButtons = () => {
 
   return (
     <div className="flex items-center gap-3">
-      <ShuffleButton
-        size="icon"
-        className="hover:bg-foreground/10 rounded-full"
-      />
+
       <Button
         variant="ghost"
         size="icon"

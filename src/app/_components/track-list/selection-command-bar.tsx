@@ -75,7 +75,7 @@ export function SelectionCommandBar({
           role="toolbar"
           aria-label="Track selection actions"
           className={cn(
-            "pointer-events-auto fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-0.5 rounded-full p-1 text-card-foreground sm:bottom-28",
+            "pointer-events-auto fixed bottom-24 left-1/2 z-50 flex w-max -translate-x-1/2 items-center gap-0.5 rounded-full p-1 text-card-foreground sm:bottom-28",
             COMMAND_BAR_SURFACE,
           )}
           initial={
@@ -93,7 +93,7 @@ export function SelectionCommandBar({
           }}
           style={{ willChange: "transform, opacity" }}
         >
-          <div className="flex items-center rounded-full border border-dashed border-white/25 bg-white/4 ps-2.5">
+          <div className="flex items-center rounded-full border border-dashed border-white/25 bg-white/4 ps-2.5 shrink-0">
             <span className="text-sm tabular-nums text-muted-foreground">
               {selectedCount} selected
             </span>
@@ -112,7 +112,7 @@ export function SelectionCommandBar({
             className="mx-0.5 h-5 shrink-0 bg-white/15"
             aria-hidden
           />
-          <div className="flex items-center">
+          <div className="flex shrink-0 items-center">
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={

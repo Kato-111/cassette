@@ -8,6 +8,7 @@ import {
   IconMusic,
   IconPlus,
   IconSettings,
+  IconUser,
   IconTrash,
 } from "@tabler/icons-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -343,9 +344,19 @@ const SettingsNav = () => {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              isActive={pathname === "/settings"}
+              isActive={pathname === "/settings/session"}
               size="sm"
-              render={<Link href="/settings" prefetch tabIndex={0} />}
+              render={<Link href="/settings/session" prefetch tabIndex={0} />}
+            >
+              <IconUser />
+              <span>Session</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={pathname === "/settings/albums"}
+              size="sm"
+              render={<Link href="/settings/albums" prefetch tabIndex={0} />}
             >
               <IconMusic />
               <span>Albums</span>
@@ -462,7 +473,7 @@ export const LibrarySidebar = () => {
             <SidebarMenuButton
               isActive={mode === "settings"}
               size="sm"
-              render={<Link href="/settings" prefetch tabIndex={0} />}
+              render={<Link href="/settings/session" prefetch tabIndex={0} />}
             >
               <IconSettings />
               <span>Settings</span>

@@ -18,7 +18,6 @@ import { FavoriteButton } from "@/app/_components/favorite-button";
 import { removeTrackLabel } from "@/app/_components/track-list/labels";
 import {
   useAddToUserQueue,
-  usePlayFromContext,
   useSetActivePane,
   useTogglePlayPause,
 } from "@/contexts/deck-context";
@@ -361,21 +360,21 @@ const TrackRowMenu = ({
 export type TrackRowProps = {
   track: Track;
   index: number;
-  tabIndex?: number;
   query?: string;
   isCurrent: boolean;
   isPlaying: boolean;
   isSelected: boolean;
+  onPlay: (index: number) => void;
 };
 
 const TrackRowInner = ({
   track,
   index,
-  tabIndex = -1,
   query,
   isCurrent,
   isPlaying,
   isSelected: selected,
+  onPlay,
 }: TrackRowProps) => {
   const {
     reorderable,
@@ -383,9 +382,7 @@ const TrackRowInner = ({
     selectable,
     inSelectionMode,
     toggleSelected,
-    tracks,
   } = useTrackList();
-  const playFromContext = usePlayFromContext();
   const togglePlayPause = useTogglePlayPause();
   const setActivePane = useSetActivePane();
 
@@ -414,7 +411,7 @@ const TrackRowInner = ({
     if (isCurrent) {
       togglePlayPause();
     } else {
-      playFromContext(tracks, index);
+      onPlay(index);
     }
   };
 
@@ -427,19 +424,10 @@ const TrackRowInner = ({
       style={style}
       {...dragAttrs}
       {...(dragListeners ?? {})}
-      tabIndex={tabIndex}
-      data-row-index={index}
       data-state={isCurrent || selected ? "selected" : undefined}
       onClick={handleRowClick}
-      onKeyDown={(e) => {
-        if (e.target !== e.currentTarget) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleRowClick();
-        }
-      }}
       className={cn(
-        "group/tr select-none outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rose/60",
+        "group/tr select-none",
         !dragEnabled && "cursor-pointer",
         isDragging && "opacity-0",
       )}
@@ -467,7 +455,7 @@ const TrackRowInner = ({
                 track={track}
                 isCurrent={isCurrent}
                 isPlaying={isPlaying}
-                onPlay={() => playFromContext(tracks, index)}
+                onPlay={() => onPlay(index)}
                 onTogglePlayPause={togglePlayPause}
               />
             </div>

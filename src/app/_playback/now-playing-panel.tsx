@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   startTransition,
   useActionState,
+  useDeferredValue,
   useEffect,
   useRef,
   useState,
@@ -130,6 +131,7 @@ const EditableInput = ({
 
 export const NowPlayingPanel = () => {
   const currentTrack = useCurrentTrack();
+  const track = useDeferredValue(currentTrack);
   const [artworkState, artworkAction, artworkPending] = useActionState(
     uploadTrackArtworkAction,
     { ok: false as const, error: "" },
@@ -145,11 +147,11 @@ export const NowPlayingPanel = () => {
     return () => window.clearTimeout(t);
   }, [artworkPending]);
 
-  if (!currentTrack) return null;
+  if (!track) return null;
 
   const artworkUrl = artworkState.ok
     ? artworkState.artworkUrl
-    : currentTrack.artworkUrl;
+    : track.artworkUrl;
 
   return (
     <aside className="m-2 ml-0 hidden w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-white/12 bg-background p-5 shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_4px_12px_rgb(0_0_0/0.6)] max-md:hidden lg:flex">
@@ -158,8 +160,8 @@ export const NowPlayingPanel = () => {
           <div className="mb-4 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-foreground">Now Playing</h2>
             <FavoriteButton
-              trackId={currentTrack.id}
-              isFavorite={currentTrack.isFavorite}
+              trackId={track.id}
+              isFavorite={track.isFavorite}
             />
           </div>
           <div className="group relative mx-auto mb-5 aspect-square w-full max-w-56 overflow-hidden rounded-lg bg-muted shadow-lg shadow-black/40">
@@ -174,7 +176,7 @@ export const NowPlayingPanel = () => {
           />
         ) : null}
         <form action={artworkAction} className="absolute inset-0">
-          <input type="hidden" name="trackId" value={currentTrack.id} />
+          <input type="hidden" name="trackId" value={track.id} />
           <label
             htmlFor="artwork-upload"
             className="absolute inset-0 flex cursor-pointer items-center justify-center transition-colors group-hover:bg-black/40"
@@ -208,28 +210,28 @@ export const NowPlayingPanel = () => {
           </div>
           <div className="space-y-3">
             <EditableInput
-              trackId={currentTrack.id}
+              trackId={track.id}
               field="title"
               label="Title"
-              initialValue={currentTrack.title}
+              initialValue={track.title}
             />
             <EditableInput
-              trackId={currentTrack.id}
+              trackId={track.id}
               field="artist"
               label="Artist"
-              initialValue={currentTrack.artist}
+              initialValue={track.artist}
             />
             <EditableInput
-              trackId={currentTrack.id}
+              trackId={track.id}
               field="album"
               label="Album"
-              initialValue={currentTrack.album ?? ""}
+              initialValue={track.album ?? ""}
             />
             <EditableInput
-              trackId={currentTrack.id}
+              trackId={track.id}
               field="genre"
               label="Genre"
-              initialValue={currentTrack.genre ?? ""}
+              initialValue={track.genre ?? ""}
             />
           </div>
         </div>

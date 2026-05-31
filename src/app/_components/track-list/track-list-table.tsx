@@ -2,9 +2,8 @@
 
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useCurrentTrack, useIsPlaying } from "@/contexts/deck-context";
-import { isTypingTarget } from "@/lib/keyboard";
+import { useCallback, useEffect, useMemo } from "react";
+import { useCurrentTrack, useIsPlaying, usePlayFromContext } from "@/contexts/deck-context";
 import { useTrackList } from "@/contexts/track-list-context";
 import { TableBody } from "@/components/ui/table";
 import { TRACK_ROW_COLUMN_COUNT, TrackRow } from "./track-row";
@@ -41,16 +40,12 @@ export const TrackListTableBody = () => {
   } = useTrackList();
   const currentTrack = useCurrentTrack();
   const isPlaying = useIsPlaying();
+  const playFromContext = usePlayFromContext();
 
-  // Roving tabindex: one row has tabIndex=0 (the keyboard entry point).
-  // activeRef is kept in sync for the key handler so rapid key presses don't
-  // read stale state from a closed-over render.
-  const [activeIndex, setActiveIndex] = useState(0);
-  const activeRef = useRef(0);
-  const setActive = (idx: number) => {
-    activeRef.current = idx;
-    setActiveIndex(idx);
-  };
+  const onPlay = useCallback(
+    (index: number) => playFromContext(tracks, index),
+    [playFromContext, tracks],
+  );
 
   const virtualizer = useVirtualizer({
     count: tracks.length,
@@ -59,48 +54,25 @@ export const TrackListTableBody = () => {
     overscan: OVERSCAN,
   });
 
-  useLayoutEffect(() => {
+  // useEffect (not useLayoutEffect) to avoid triggering TanStack Virtual's
+  // flushSync path synchronously during the commit phase, which caused a
+  // 3.5 s INP block when the scroll element changed or track count changed.
+  useEffect(() => {
     if (scrollContainerRef.current) {
       virtualizer.measure();
     }
-  }, [virtualizer, scrollContainerRef, tracks.length]);
-
-  // Update activeIndex whenever a row receives focus (handles clicks and
-  // programmatic focus from outside the arrow-key handler).
-  const handleFocus = (e: React.FocusEvent) => {
-    const row = (e.target as HTMLElement).closest<HTMLElement>("[data-row-index]");
-    if (row?.dataset.rowIndex != null) setActive(Number(row.dataset.rowIndex));
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (isTypingTarget(e.target)) return;
-    const isDown = e.key === "ArrowDown" || e.key === "j";
-    const isUp = e.key === "ArrowUp" || e.key === "k";
-    if (!isDown && !isUp) return;
-    e.preventDefault();
-    const next = Math.max(
-      0,
-      Math.min(activeRef.current + (isDown ? 1 : -1), tracks.length - 1),
-    );
-    setActive(next);
-    virtualizer.scrollToIndex(next, { align: "auto" });
-    // The target row may not be in the DOM yet (virtualizer renders after scroll).
-    // requestAnimationFrame waits for React to flush the new virtual items.
-    requestAnimationFrame(() => {
-      scrollContainerRef.current
-        ?.querySelector<HTMLElement>(`[data-row-index="${next}"]`)
-        ?.focus();
-    });
-  };
+  }, [scrollContainerRef, tracks.length, virtualizer]);
 
   const measuredItems = virtualizer.getVirtualItems();
   const virtualItems = useMemo(
     () =>
       measuredItems.length > 0 || tracks.length === 0
         ? measuredItems
-        : buildFallbackVirtualItems(tracks.length),
+        : buildFallbackVirtualItems(Math.min(tracks.length, OVERSCAN * 3)),
     [measuredItems, tracks.length],
   );
+
+  const sortableIds = useMemo(() => tracks.map((t) => t.id), [tracks]);
 
   if (tracks.length === 0) {
     return <TableBody className="h-full" />;
@@ -122,11 +94,11 @@ export const TrackListTableBody = () => {
             key={track.id}
             track={track}
             index={virtualRow.index}
-            tabIndex={virtualRow.index === activeIndex ? 0 : -1}
             query={query}
             isCurrent={currentTrack?.id === track.id}
             isPlaying={currentTrack?.id === track.id && isPlaying}
             isSelected={isSelected(track.id)}
+            onPlay={onPlay}
           />
         );
       })}
@@ -135,14 +107,10 @@ export const TrackListTableBody = () => {
   );
 
   return (
-    <TableBody
-      className="h-full"
-      onFocus={handleFocus}
-      onKeyDown={handleKeyDown}
-    >
+    <TableBody className="h-full">
       {reorderable ? (
         <SortableContext
-          items={tracks.map((t) => t.id)}
+          items={sortableIds}
           strategy={verticalListSortingStrategy}
         >
           {rows}

@@ -57,6 +57,11 @@ const syncOne = async (key: string, size: number) => {
   const fallbackTitle = stripExt(baseName(key)).replace(/\s*\[[^\]]+\]\s*$/, "");
   const meta = await extractMetadata(buffer, fallbackTitle, mimeFor(ext));
 
+  const lastInLibrary = await prisma.track.findFirst({
+    orderBy: { libraryOrder: "desc" },
+    select: { libraryOrder: true },
+  });
+
   const track = await prisma.track.create({
     data: {
       title: meta.title,
@@ -66,6 +71,7 @@ const syncOne = async (key: string, size: number) => {
       genre: meta.genre,
       key: meta.key,
       storageKey: key,
+      libraryOrder: (lastInLibrary?.libraryOrder ?? -1) + 1,
       isLocal: false,
     },
   });

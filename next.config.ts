@@ -1,4 +1,3 @@
-import { withSerwist } from "@serwist/turbopack";
 import type { NextConfig } from "next";
 
 const r2PublicHost = (() => {
@@ -12,6 +11,15 @@ const r2PublicHost = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/settings",
+        destination: "/settings/session",
+        permanent: false,
+      },
+    ];
+  },
   devIndicators: false,
   experimental: {
     serverActions: {
@@ -35,4 +43,4 @@ const nextConfig: NextConfig = {
     : undefined,
 };
 
-export default withSerwist(nextConfig);
+export default nextConfig;

@@ -1,7 +1,6 @@
 import { Inter, Ephesis } from "next/font/google";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { SerwistProvider } from "@/app/_components/serwist-provider";
 import { LibrarySidebar } from "@/app/_components/library-sidebar";
 import { MainTransportBar } from "@/app/_components/main-transport-bar";
 import { NowPlayingAside } from "@/app/_playback/now-playing-aside";
@@ -12,6 +11,8 @@ import { LibraryProvider } from "@/contexts/library-context";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getAllAlbums, getAllPlaylists } from "@/lib/queries";
 import { isImporterConfigured } from "@/lib/importer";
+import { isAuthConfigured, isAuthed } from "@/lib/auth";
+import { AuthScreen } from "@/app/_components/auth/auth-screen";
 import { cn } from "@/lib/utils";
 
 const TRANSPORT_H = "calc(5rem + env(safe-area-inset-bottom))";
@@ -30,11 +31,6 @@ export const metadata: Metadata = {
     template: "%s · Cassette",
   },
   description: "A personal audio library.",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Cassette",
-  },
   formatDetection: {
     telephone: false,
   },
@@ -49,6 +45,25 @@ export const viewport: Viewport = {
 };
 
 const RootLayout = async ({ children }: { children: React.ReactNode }) => {
+  const htmlClassName = cn(
+    "dark bg-black h-full",
+    inter.variable,
+    ephesis.variable,
+    "font-sans antialiased",
+  );
+
+  // Password gate: when AUTH_PASSWORD is set and the request isn't authenticated,
+  // render only the login screen and skip loading the library entirely.
+  if (isAuthConfigured() && !(await isAuthed())) {
+    return (
+      <html lang="en" className={htmlClassName}>
+        <body className="flex h-dvh flex-col overflow-hidden bg-black text-foreground">
+          <AuthScreen />
+        </body>
+      </html>
+    );
+  }
+
   const [playlists, albums] = await Promise.all([
     getAllPlaylists(),
     getAllAlbums(),
@@ -56,18 +71,9 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
   const importerEnabled = isImporterConfigured();
 
   return (
-    <html
-      lang="en"
-      className={cn(
-        "dark bg-black h-full",
-        inter.variable,
-        ephesis.variable,
-        "font-sans antialiased",
-      )}
-    >
+    <html lang="en" className={htmlClassName}>
       <body className="flex h-dvh flex-col overflow-hidden bg-black text-foreground">
-        <SerwistProvider swUrl="/serwist/sw.js">
-          <DeckProvider>
+        <DeckProvider>
             <ImporterProvider enabled={importerEnabled}>
               <LibraryProvider
                 initialPlaylists={playlists}
@@ -95,7 +101,6 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
               </LibraryProvider>
             </ImporterProvider>
           </DeckProvider>
-        </SerwistProvider>
       </body>
     </html>
   );

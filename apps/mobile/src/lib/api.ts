@@ -1,6 +1,10 @@
 import type { Catalog, Playlist, PlaylistDetail } from "./types";
 
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+const DEPLOYED_API_URL = "https://cassetta.vercel.app";
+
+export const API_URL = (
+  process.env.EXPO_PUBLIC_API_URL ?? DEPLOYED_API_URL
+).replace(/\/$/, "");
 
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   if (!API_URL) throw new Error("EXPO_PUBLIC_API_URL is not configured");

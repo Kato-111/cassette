@@ -4,16 +4,20 @@ Android-first Expo client for the Cassetta music library.
 
 ## Development
 
-Start the Next.js API and Metro from the monorepo root:
+Start Metro from the monorepo root:
 
 ```bash
-pnpm --filter @cassetta/web dev
 pnpm --filter @cassetta/mobile dev
 ```
 
-`EXPO_PUBLIC_API_URL` in `.env` must point to the computer's LAN address so a
-physical phone can reach Next.js. Copy `.env.example` when setting up another
-machine.
+The app defaults to the deployed Next.js API at `https://cassetta.vercel.app`,
+so a physical phone does not need the local web app running. To develop API
+changes locally, override `EXPO_PUBLIC_API_URL` with the computer's LAN URL and run
+`pnpm --filter @cassetta/web dev` alongside Metro.
+
+The mobile launcher reads the shared root `.env`, but only passes
+`EXPO_PUBLIC_*` values to Expo. Server credentials are not exposed to the
+mobile build process.
 
 ## Android development build
 

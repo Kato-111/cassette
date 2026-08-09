@@ -1,0 +1,44 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  api:
+    build: .
+    command: ["bun", "run", "src/server.ts"]
+    ports:
+      - "8787:8787"
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379
+      TEMP_DIR: /tmp/import
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["bun", "run", "src/worker.ts"]
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379
+      TEMP_DIR: /tmp/import
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - import-tmp:/tmp/import
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  import-tmp:

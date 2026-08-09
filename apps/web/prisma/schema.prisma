@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGO_URL")
+}
+
+model Track {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  artist      String
+  album       String?
+  durationSec Int
+  genre       String?
+  key         String?
+  artworkUrl     String?
+  storageKey     String   @unique
+  libraryOrder   Int      @default(0)
+  isLocal        Boolean  @default(false)
+  isFavorite     Boolean  @default(false)
+  youtubeVideoId String?
+  spotifyTrackId String?
+  sourceUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  playlists PlaylistTrack[]
+
+  @@index([title])
+  @@index([artist])
+  @@index([album])
+  @@index([createdAt])
+  @@index([libraryOrder])
+  @@index([isFavorite])
+  @@index([youtubeVideoId])
+  @@index([spotifyTrackId])
+}
+
+model Playlist {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  coverUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tracks PlaylistTrack[]
+
+  @@map("Collection")
+}
+
+model PlaylistTrack {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  playlistId String @map("collectionId") @db.ObjectId
+  trackId    String @db.ObjectId
+  order      Int
+
+  playlist Playlist @relation(fields: [playlistId], references: [id])
+  track    Track    @relation(fields: [trackId], references: [id])
+
+  @@unique([playlistId, trackId])
+  @@index([playlistId, order])
+  @@map("CollectionTrack")
+}
+
+model AppSetting {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model HiddenAlbum {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  albumName String   @unique
+  createdAt DateTime @default(now())
+}

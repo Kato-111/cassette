@@ -1,0 +1,32 @@
+{
+  "name": "@cassetta/music-importer",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --parallel dev:api dev:worker",
+    "dev:api": "bun --watch src/server.ts",
+    "dev:worker": "bun --watch src/worker.ts",
+    "start:api": "bun run src/server.ts",
+    "start:worker": "bun run src/worker.ts",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1048.0",
+    "@prisma/client": "^6",
+    "bullmq": "^5.66.4",
+    "dotenv": "^17.4.2",
+    "hono": "^4.11.3",
+    "ioredis": "^5.9.0",
+    "music-metadata": "^11.12.3",
+    "youtubei.js": "^17.2.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prisma": "^6",
+    "typescript": "^5",
+    "vitest": "^4.1.7"
+  }
+}

@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./load-env";
 import { readdir, readFile } from "node:fs/promises";
 import { extname, join, parse } from "node:path";
 import { prisma } from "../src/lib/db";

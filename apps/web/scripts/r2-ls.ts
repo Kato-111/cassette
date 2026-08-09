@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./load-env";
 import { listObjects } from "../src/lib/r2";
 
 const main = async () => {

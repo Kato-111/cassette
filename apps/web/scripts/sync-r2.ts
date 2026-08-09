@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./load-env";
 import { extname } from "node:path";
 import { prisma } from "../src/lib/db";
 import { extractMetadata } from "../src/lib/metadata";

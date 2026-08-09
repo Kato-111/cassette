@@ -2,7 +2,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 
-const envPath = join(dirname(fileURLToPath(import.meta.url)), "..", "..", ".env");
+const envPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+  "..",
+  ".env",
+);
 loadEnv({ path: envPath });
 
 const requireEnv = (key: string): string => {

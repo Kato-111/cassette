@@ -16,7 +16,7 @@ services:
     command: ["bun", "run", "src/server.ts"]
     ports:
       - "8787:8787"
-    env_file: .env
+    env_file: ../../.env
     environment:
       REDIS_URL: redis://redis:6379
       TEMP_DIR: /tmp/import
@@ -28,7 +28,7 @@ services:
   worker:
     build: .
     command: ["bun", "run", "src/worker.ts"]
-    env_file: .env
+    env_file: ../../.env
     environment:
       REDIS_URL: redis://redis:6379
       TEMP_DIR: /tmp/import

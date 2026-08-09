@@ -1,4 +1,8 @@
+import { config as loadEnv } from "dotenv";
+import { join } from "node:path";
 import type { NextConfig } from "next";
+
+loadEnv({ path: join(process.cwd(), "..", "..", ".env") });
 
 const r2PublicHost = (() => {
   try {

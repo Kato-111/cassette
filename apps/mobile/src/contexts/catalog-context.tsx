@@ -8,41 +8,41 @@ import {
   useState,
 } from "react";
 import { api } from "@/lib/api";
-import type { Album, Catalog, Playlist, Track } from "@/lib/types";
+import type { Catalog, Playlist, Track } from "@/lib/types";
 
 type CatalogContextValue = {
-  tracks: Track[];
-  albums: Album[];
-  playlists: Playlist[];
-  favorites: Track[];
+  catalog: Catalog;
   loading: boolean;
   refreshing: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  setFavorite: (track: Track, value: boolean) => Promise<void>;
+  setFavorite: (track: Track, isFavorite: boolean) => Promise<void>;
   createPlaylist: (name: string) => Promise<Playlist>;
+};
+
+const EMPTY_CATALOG: Catalog = {
+  tracks: [],
+  albums: [],
+  playlists: [],
 };
 
 const CatalogContext = createContext<CatalogContextValue | null>(null);
 
-export const CatalogProvider = ({ children }: { children: ReactNode }) => {
-  const [catalog, setCatalog] = useState<Catalog>({
-    tracks: [],
-    albums: [],
-    playlists: [],
-  });
+export function CatalogProvider({ children }: { children: ReactNode }) {
+  const [catalog, setCatalog] = useState<Catalog>(EMPTY_CATALOG);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (refresh = false) => {
-    if (refresh) setRefreshing(true);
+  const load = useCallback(async (refreshing = false) => {
+    if (refreshing) setRefreshing(true);
     else setLoading(true);
+
     try {
       setCatalog(await api.catalog());
       setError(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to load music");
+      setError(cause instanceof Error ? cause.message : "Unable to load catalog");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -54,39 +54,39 @@ export const CatalogProvider = ({ children }: { children: ReactNode }) => {
     return () => clearTimeout(task);
   }, [load]);
 
-  const setFavorite = useCallback(async (track: Track, value: boolean) => {
+  const setFavorite = useCallback(async (track: Track, isFavorite: boolean) => {
     setCatalog((current) => ({
       ...current,
       tracks: current.tracks.map((item) =>
-        item.id === track.id ? { ...item, isFavorite: value } : item,
+        item.id === track.id ? { ...item, isFavorite } : item,
       ),
     }));
+
     try {
-      await api.favorite(track.id, value);
-    } catch (error) {
+      await api.favorite(track.id, isFavorite);
+    } catch (cause) {
       setCatalog((current) => ({
         ...current,
         tracks: current.tracks.map((item) =>
-          item.id === track.id ? { ...item, isFavorite: !value } : item,
+          item.id === track.id ? { ...item, isFavorite: track.isFavorite } : item,
         ),
       }));
-      throw error;
+      throw cause;
     }
   }, []);
 
   const createPlaylist = useCallback(async (name: string) => {
-    const playlist = await api.createPlaylist(name);
+    const playlist = await api.createPlaylist(name.trim());
     setCatalog((current) => ({
       ...current,
-      playlists: [playlist, ...current.playlists],
+      playlists: [...current.playlists, playlist],
     }));
     return playlist;
   }, []);
 
   const value = useMemo<CatalogContextValue>(
     () => ({
-      ...catalog,
-      favorites: catalog.tracks.filter((track) => track.isFavorite),
+      catalog,
       loading,
       refreshing,
       error,
@@ -94,16 +94,22 @@ export const CatalogProvider = ({ children }: { children: ReactNode }) => {
       setFavorite,
       createPlaylist,
     }),
-    [catalog, loading, refreshing, error, load, setFavorite, createPlaylist],
+    [
+      catalog,
+      createPlaylist,
+      error,
+      load,
+      loading,
+      refreshing,
+      setFavorite,
+    ],
   );
 
-  return (
-    <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>
-  );
-};
+  return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
+}
 
-export const useCatalog = () => {
+export function useCatalog() {
   const context = useContext(CatalogContext);
   if (!context) throw new Error("useCatalog must be used inside CatalogProvider");
   return context;
-};
+}

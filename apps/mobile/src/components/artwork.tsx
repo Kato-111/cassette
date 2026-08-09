@@ -1,35 +1,36 @@
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
-import { Music2 } from "lucide-react-native";
+import { Disc3 } from "lucide-react-native";
 import { View } from "react-native";
+import { Icon } from "@/components/ui/icon";
 
-export const Artwork = ({
-  uri,
-  size,
-  radius = 16,
-}: {
+type ArtworkProps = {
   uri?: string | null;
-  size: number;
-  radius?: number;
-}) => (
-  <View
-    style={{ width: size, height: size, borderRadius: radius, overflow: "hidden" }}
-    className="bg-elevated"
-  >
-    {uri ? (
+  size?: number;
+  accessibilityLabel?: string;
+};
+
+export function Artwork({ uri, size = 56, accessibilityLabel }: ArtworkProps) {
+  const style = { height: size, width: size };
+
+  if (uri) {
+    return (
       <Image
         source={{ uri }}
-        style={{ width: size, height: size }}
+        style={style}
         contentFit="cover"
-        transition={220}
+        transition={150}
+        accessibilityLabel={accessibilityLabel}
       />
-    ) : (
-      <LinearGradient
-        colors={["#25252c", "#111114"]}
-        className="flex-1 items-center justify-center"
-      >
-        <Music2 color="#777780" size={size * 0.32} strokeWidth={1.5} />
-      </LinearGradient>
-    )}
-  </View>
-);
+    );
+  }
+
+  return (
+    <View
+      className="items-center justify-center bg-muted"
+      style={style}
+      accessibilityLabel={accessibilityLabel ?? "No artwork"}
+    >
+      <Icon as={Disc3} className="text-muted-foreground" />
+    </View>
+  );
+}

@@ -1,20 +1,11 @@
-import { ChevronRight } from "lucide-react-native";
-import { Pressable, Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "@/components/ui/text";
 
-export const SectionHeading = ({
-  title,
-  onPress,
-}: {
-  title: string;
-  onPress?: () => void;
-}) => (
-  <View className="mb-4 flex-row items-center justify-between px-5">
-    <Text className="text-[21px] font-bold tracking-tight text-white">{title}</Text>
-    {onPress ? (
-      <Pressable onPress={onPress} className="flex-row items-center gap-1">
-        <Text className="text-sm font-medium text-muted">See all</Text>
-        <ChevronRight color="#92929d" size={16} />
-      </Pressable>
-    ) : null}
-  </View>
-);
+export function SectionHeading({ title, description }: { title: string; description?: string }) {
+  return (
+    <View className="gap-1 px-4 pb-2 pt-4">
+      <Text variant="h4">{title}</Text>
+      {description ? <Text variant="muted">{description}</Text> : null}
+    </View>
+  );
+}

@@ -1,25 +1,60 @@
-import { Bell, ChevronRight, Cloud, Palette } from "lucide-react-native";
-import { Text, View } from "react-native";
+import Constants, { AppOwnership } from "expo-constants";
+import { RefreshCw } from "lucide-react-native";
+import { ScrollView, View } from "react-native";
+import { useColorScheme } from "nativewind";
 import { Screen } from "@/components/screen";
-
-const Row = ({ icon: Icon, label, detail }: { icon: typeof Cloud; label: string; detail: string }) => (
-  <View className="flex-row items-center gap-4 border-b border-white/5 px-4 py-4">
-    <View className="h-9 w-9 items-center justify-center rounded-xl bg-white/5"><Icon color="#b8b8c1" size={19} /></View>
-    <View className="flex-1"><Text className="font-semibold text-white">{label}</Text><Text className="mt-1 text-xs text-muted">{detail}</Text></View>
-    <ChevronRight color="#55555d" size={18} />
-  </View>
-);
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
+import { Text } from "@/components/ui/text";
+import { useCatalog } from "@/contexts/catalog-context";
+import { API_URL } from "@/lib/api";
 
 export default function SettingsScreen() {
+  const { colorScheme, setColorScheme } = useColorScheme();
+  const { refreshing, refresh } = useCatalog();
+  const supportsNativeMediaSession = Constants.appOwnership !== AppOwnership.Expo;
+
   return (
-    <Screen>
-      <View className="px-5 pb-5 pt-4"><Text className="text-[34px] font-bold tracking-[-1.2px] text-white">Settings</Text><Text className="mt-2 text-sm text-muted">A quiet place for what comes next.</Text></View>
-      <View className="mx-4 overflow-hidden rounded-3xl bg-surface">
-        <Row icon={Cloud} label="Connection" detail="Connected to your Cassetta server" />
-        <Row icon={Palette} label="Appearance" detail="Dark · system controls coming soon" />
-        <Row icon={Bell} label="Notifications" detail="Not configured" />
-      </View>
-      <Text className="mt-8 text-center text-xs font-semibold uppercase tracking-[2px] text-white/25">Cassetta 1.0</Text>
+    <Screen title="Settings" description="App preferences and connection details">
+      <ScrollView contentContainerClassName="gap-4 p-4 pb-32">
+        <Card>
+          <CardHeader>
+            <CardTitle>Appearance</CardTitle>
+            <CardDescription>Choose how the default component theme follows your device.</CardDescription>
+          </CardHeader>
+          <CardContent className="gap-2">
+            <View className="flex-row gap-2">
+              <Button variant={colorScheme === "light" ? "default" : "outline"} onPress={() => setColorScheme("light")}>
+                <Text>Light</Text>
+              </Button>
+              <Button variant={colorScheme === "dark" ? "default" : "outline"} onPress={() => setColorScheme("dark")}>
+                <Text>Dark</Text>
+              </Button>
+              <Button variant="outline" onPress={() => setColorScheme("system")}>
+                <Text>System</Text>
+              </Button>
+            </View>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Music server</CardTitle>
+            <CardDescription numberOfLines={2}>{API_URL}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" disabled={refreshing} onPress={() => void refresh()}>
+              <Icon as={RefreshCw} />
+              <Text>{refreshing ? "Refreshing…" : "Refresh library"}</Text>
+            </Button>
+          </CardContent>
+        </Card>
+        <Text variant="muted" className="text-center">
+          {supportsNativeMediaSession
+            ? "Background playback uses your device’s native media controls."
+            : "Expo Go cannot run the native background playback service. Install a development build to enable it."}
+        </Text>
+      </ScrollView>
     </Screen>
   );
 }

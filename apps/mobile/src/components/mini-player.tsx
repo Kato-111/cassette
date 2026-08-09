@@ -1,36 +1,47 @@
-import { BlurView } from "expo-blur";
 import { router } from "expo-router";
 import { Pause, Play, SkipForward } from "lucide-react-native";
-import { Pressable, Text, View } from "react-native";
-import { usePlayer } from "@/contexts/player-context";
-import { Artwork } from "./artwork";
+import { View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Artwork } from "@/components/artwork";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
+import { Progress } from "@/components/ui/progress";
+import { Text } from "@/components/ui/text";
+import { usePlayerState } from "@/contexts/player-context";
 
-export const MiniPlayer = () => {
-  const { currentTrack, playing, toggle, next, currentTime, duration } = usePlayer();
+export function MiniPlayer() {
+  const insets = useSafeAreaInsets();
+  const { currentTrack, playing, currentTime, duration, hasNext, toggle, next } = usePlayerState();
+
   if (!currentTrack) return null;
-  const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
+
+  const progress = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
 
   return (
-    <Pressable
-      onPress={() => router.push("/player")}
-      className="absolute bottom-[68px] left-3 right-3 overflow-hidden rounded-[20px] border border-white/10"
+    <Card
+      className="absolute left-2 right-2 flex-row items-center gap-1 overflow-hidden p-2"
+      style={{ bottom: 52 + insets.bottom }}
     >
-      <BlurView intensity={75} tint="dark" className="flex-row items-center gap-3 bg-[#16161acc] p-2.5">
-        <Artwork uri={currentTrack.artworkUrl} size={46} radius={11} />
+      <Button
+        variant="ghost"
+        className="h-auto min-w-0 flex-1 justify-start p-0"
+        accessibilityLabel={`Open Now Playing for ${currentTrack.title}`}
+        onPress={() => router.push("/player")}
+      >
+        <Artwork uri={currentTrack.artworkUrl} size={48} />
         <View className="min-w-0 flex-1">
-          <Text numberOfLines={1} className="text-sm font-semibold text-white">{currentTrack.title}</Text>
-          <Text numberOfLines={1} className="mt-0.5 text-xs text-muted">{currentTrack.artist}</Text>
+          <Text numberOfLines={1}>{currentTrack.title}</Text>
+          <Text variant="muted" numberOfLines={1}>{currentTrack.artist}</Text>
+          <Progress value={progress} className="mt-2 h-1" />
         </View>
-        <Pressable hitSlop={10} onPress={(event) => { event.stopPropagation(); toggle(); }} className="p-2">
-          {playing ? <Pause color="#fff" fill="#fff" size={22} /> : <Play color="#fff" fill="#fff" size={22} />}
-        </Pressable>
-        <Pressable hitSlop={10} onPress={(event) => { event.stopPropagation(); void next(); }} className="p-2">
-          <SkipForward color="#fff" fill="#fff" size={21} />
-        </Pressable>
-      </BlurView>
-      <View className="h-0.5 bg-white/10">
-        <View className="h-full bg-white" style={{ width: `${progress * 100}%` }} />
-      </View>
-    </Pressable>
+      </Button>
+      <Button accessibilityLabel={playing ? "Pause" : "Play"} variant="ghost" size="icon" onPress={toggle}>
+        <Icon as={playing ? Pause : Play} />
+      </Button>
+      <Button accessibilityLabel="Next track" variant="ghost" size="icon" disabled={!hasNext} onPress={next}>
+        <Icon as={SkipForward} />
+      </Button>
+    </Card>
   );
-};
+}

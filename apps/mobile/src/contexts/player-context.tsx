@@ -1,10 +1,5 @@
-import {
-  requestNotificationPermissionsAsync,
-  setAudioModeAsync,
-  useAudioPlayer,
-  useAudioPlayerStatus,
-} from "expo-audio";
-import * as Haptics from "expo-haptics";
+import Constants, { AppOwnership } from "expo-constants";
+import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import {
   createContext,
   type ReactNode,
@@ -18,28 +13,38 @@ import {
 import { api } from "@/lib/api";
 import type { Track } from "@/lib/types";
 
-type PlayerContextValue = {
+type PlayerActionsContextValue = {
+  playTrack: (track: Track, context?: Track[]) => void;
+};
+
+type PlayerStateContextValue = {
   currentTrack: Track | null;
-  queue: Track[];
   playing: boolean;
   buffering: boolean;
   currentTime: number;
   duration: number;
-  playTrack: (track: Track, context?: Track[]) => Promise<void>;
+  hasPrevious: boolean;
+  hasNext: boolean;
   toggle: () => void;
-  next: () => Promise<void>;
   previous: () => Promise<void>;
+  next: () => void;
   seek: (seconds: number) => Promise<void>;
 };
 
-const PlayerContext = createContext<PlayerContextValue | null>(null);
+const PlayerActionsContext = createContext<PlayerActionsContextValue | null>(null);
+const PlayerStateContext = createContext<PlayerStateContextValue | null>(null);
+const supportsNativeMediaSession = Constants.appOwnership !== AppOwnership.Expo;
 
-export const PlayerProvider = ({ children }: { children: ReactNode }) => {
+export function PlayerProvider({ children }: { children: ReactNode }) {
   const player = useAudioPlayer(null, { updateInterval: 500 });
   const status = useAudioPlayerStatus(player);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [queue, setQueue] = useState<Track[]>([]);
-  const finishingRef = useRef(false);
+  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [orderLength, setOrderLength] = useState(0);
+  const orderRef = useRef<Track[]>([]);
+  const indexRef = useRef(-1);
+  const advancingRef = useRef(false);
+  const lockScreenActiveRef = useRef(false);
 
   useEffect(() => {
     void setAudioModeAsync({
@@ -49,80 +54,125 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
+  useEffect(() => {
+    return () => {
+      player.clearLockScreenControls();
+      lockScreenActiveRef.current = false;
+    };
+  }, [player]);
+
   const activate = useCallback(
-    async (track: Track) => {
+    (track: Track, index: number) => {
+      indexRef.current = index;
+      setCurrentIndex(index);
       setCurrentTrack(track);
       player.replace({ uri: api.streamUrl(track.storageKey) });
-      player.setActiveForLockScreen(true, {
+
+      const metadata = {
         title: track.title,
         artist: track.artist,
         albumTitle: track.album ?? undefined,
         artworkUrl: track.artworkUrl ?? undefined,
-      });
-      await requestNotificationPermissionsAsync().catch(() => undefined);
+      };
+
+      if (!supportsNativeMediaSession) {
+        player.play();
+        return;
+      }
+
+      if (lockScreenActiveRef.current) {
+        player.updateLockScreenMetadata(metadata);
+      } else {
+        player.setActiveForLockScreen(true, metadata, {
+          showSeekBackward: true,
+          showSeekForward: true,
+        });
+        lockScreenActiveRef.current = true;
+      }
+
       player.play();
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     [player],
   );
 
   const playTrack = useCallback(
-    async (track: Track, context: Track[] = []) => {
-      const index = context.findIndex((item) => item.id === track.id);
-      setQueue(index >= 0 ? context.slice(index + 1) : []);
-      await activate(track);
+    (track: Track, context: Track[] = []) => {
+      const order = context.some((item) => item.id === track.id) ? context : [track];
+      const index = Math.max(
+        order.findIndex((item) => item.id === track.id),
+        0,
+      );
+      orderRef.current = order;
+      setOrderLength(order.length);
+      activate(track, index);
     },
     [activate],
   );
 
-  const next = useCallback(async () => {
-    const [track, ...rest] = queue;
-    if (!track) {
+  const next = useCallback(() => {
+    const nextIndex = indexRef.current + 1;
+    const nextTrack = orderRef.current[nextIndex];
+    if (!nextTrack) {
       player.pause();
       return;
     }
-    setQueue(rest);
-    await activate(track);
-  }, [activate, player, queue]);
+    activate(nextTrack, nextIndex);
+  }, [activate, player]);
 
   const previous = useCallback(async () => {
-    if (status.currentTime > 4) {
+    if (status.currentTime > 3 || indexRef.current <= 0) {
       await player.seekTo(0);
       return;
     }
-    await player.seekTo(0);
-  }, [player, status.currentTime]);
+    const previousIndex = indexRef.current - 1;
+    activate(orderRef.current[previousIndex], previousIndex);
+  }, [activate, player, status.currentTime]);
 
   useEffect(() => {
-    if (!status.didJustFinish || finishingRef.current) return;
-    finishingRef.current = true;
-    void next().finally(() => {
-      finishingRef.current = false;
-    });
+    if (!status.didJustFinish || advancingRef.current) return;
+    advancingRef.current = true;
+    next();
+    advancingRef.current = false;
   }, [next, status.didJustFinish]);
 
-  const value = useMemo<PlayerContextValue>(
+  const actions = useMemo<PlayerActionsContextValue>(() => ({ playTrack }), [playTrack]);
+  const state = useMemo<PlayerStateContextValue>(
     () => ({
       currentTrack,
-      queue,
       playing: status.playing,
       buffering: status.isBuffering,
       currentTime: status.currentTime,
       duration: status.duration || currentTrack?.durationSec || 0,
-      playTrack,
-      toggle: () => (status.playing ? player.pause() : player.play()),
-      next,
+      hasPrevious: currentTrack !== null,
+      hasNext: currentIndex >= 0 && currentIndex < orderLength - 1,
+      toggle: () => {
+        if (status.playing) player.pause();
+        else if (status.duration > 0 && status.currentTime >= status.duration) {
+          void player.seekTo(0).then(() => player.play());
+        } else player.play();
+      },
       previous,
+      next,
       seek: (seconds) => player.seekTo(seconds),
     }),
-    [currentTrack, next, playTrack, player, previous, queue, status],
+    [currentIndex, currentTrack, next, orderLength, player, previous, status],
   );
 
-  return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
-};
+  return (
+    <PlayerActionsContext.Provider value={actions}>
+      <PlayerStateContext.Provider value={state}>{children}</PlayerStateContext.Provider>
+    </PlayerActionsContext.Provider>
+  );
+}
 
-export const usePlayer = () => {
-  const context = useContext(PlayerContext);
-  if (!context) throw new Error("usePlayer must be used inside PlayerProvider");
+export function usePlayerActions() {
+  const context = useContext(PlayerActionsContext);
+  if (!context) throw new Error("usePlayerActions must be used inside PlayerProvider");
   return context;
-};
+}
+
+export function usePlayerState() {
+  const context = useContext(PlayerStateContext);
+  if (!context) throw new Error("usePlayerState must be used inside PlayerProvider");
+  return context;
+}
